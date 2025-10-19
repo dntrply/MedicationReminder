@@ -91,3 +91,9 @@ $RECYCLE.BIN/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Debug files
+debug_db.sh
+medication_database.db
+*.db
+debug_export_*.json

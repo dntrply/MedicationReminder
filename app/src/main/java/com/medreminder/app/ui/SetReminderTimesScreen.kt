@@ -437,7 +437,7 @@ fun SetReminderTimesScreen(
                                 }
                                 Box(
                                     modifier = Modifier
-                                        .width(80.dp)
+                                        .width(100.dp)
                                         .background(
                                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                             shape = RoundedCornerShape(8.dp)
@@ -461,6 +461,7 @@ fun SetReminderTimesScreen(
                                                     hourInputText = digitsOnly
                                                 }
                                             },
+                                            singleLine = true,
                                             textStyle = androidx.compose.ui.text.TextStyle(
                                                 fontSize = 48.sp,
                                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -471,7 +472,7 @@ fun SetReminderTimesScreen(
                                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
                                             ),
                                             modifier = Modifier
-                                                .fillMaxWidth()
+                                                .width(90.dp)
                                                 .focusRequester(hourFocusRequester)
                                         )
                                     } else {
@@ -505,7 +506,7 @@ fun SetReminderTimesScreen(
                                 }
                                 Box(
                                     modifier = Modifier
-                                        .width(80.dp)
+                                        .width(100.dp)
                                         .background(
                                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                                             shape = RoundedCornerShape(8.dp)
@@ -529,6 +530,7 @@ fun SetReminderTimesScreen(
                                                     minuteInputText = digitsOnly
                                                 }
                                             },
+                                            singleLine = true,
                                             textStyle = androidx.compose.ui.text.TextStyle(
                                                 fontSize = 48.sp,
                                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -539,7 +541,7 @@ fun SetReminderTimesScreen(
                                                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
                                             ),
                                             modifier = Modifier
-                                                .fillMaxWidth()
+                                                .width(90.dp)
                                                 .focusRequester(minuteFocusRequester)
                                         )
                                     } else {

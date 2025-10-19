@@ -8,6 +8,16 @@ import org.json.JSONObject
 /**
  * Tracks medications that have active notifications at the current time
  * Used for grouping notifications when multiple medications are due simultaneously
+ *
+ * This tracker stores pending medications in SharedPreferences and provides:
+ * - Deduplication based on medication ID + hour + minute to prevent duplicate notifications
+ * - Auto-cleanup of stale entries on app startup
+ * - Removal of entries for deleted medications
+ *
+ * Key design decisions:
+ * - Uses (medicationId, hour, minute) as unique key to allow same medication at different times
+ * - Automatically cleans entries older than 2 hours
+ * - Syncs with database on app start to remove stale references
  */
 object PendingMedicationTracker {
     private const val TAG = "PendingMedTracker"
@@ -30,8 +40,13 @@ object PendingMedicationTracker {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val pending = getPendingMedications(context).toMutableList()
 
-        // Remove any existing entry for this medication
-        pending.removeAll { it.medicationId == medication.medicationId }
+        // Remove any existing entry for this EXACT medication (same ID, hour, and minute)
+        // This prevents duplicates when the same alarm fires multiple times
+        pending.removeAll {
+            it.medicationId == medication.medicationId &&
+            it.hour == medication.hour &&
+            it.minute == medication.minute
+        }
 
         // Add the new entry
         pending.add(medication)
@@ -55,7 +70,7 @@ object PendingMedicationTracker {
         }
 
         prefs.edit().putString(KEY_PENDING, jsonArray.toString()).apply()
-        Log.d(TAG, "Added pending medication: ${medication.medicationName}, total pending: ${pending.size}")
+        Log.d(TAG, "Added pending medication: ${medication.medicationName} at ${medication.hour}:${medication.minute}, total pending: ${pending.size}")
     }
 
     /**
@@ -175,6 +190,19 @@ object PendingMedicationTracker {
 
         // Remove any pending medications whose IDs don't exist in the database
         pending.removeAll { !validIds.contains(it.medicationId) }
+
+        // Remove duplicates: keep only one entry per unique (medicationId, hour, minute) combination
+        val seen = mutableSetOf<String>()
+        pending.removeAll { med ->
+            val key = "${med.medicationId}_${med.hour}_${med.minute}"
+            if (seen.contains(key)) {
+                Log.d(TAG, "Removing duplicate: ${med.medicationName} at ${med.hour}:${med.minute}")
+                true
+            } else {
+                seen.add(key)
+                false
+            }
+        }
 
         if (pending.size < initialSize) {
             // Save the cleaned list

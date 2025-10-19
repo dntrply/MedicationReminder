@@ -13,9 +13,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,8 +43,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.collectAsState
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.lifecycleScope
 import coil.compose.rememberAsyncImagePainter
 import com.medreminder.app.data.Medication
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.MedicationHistory
 import com.medreminder.app.data.ReminderTime
@@ -64,8 +69,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Clean up stale pending medications on app start
-        PendingMedicationTracker.cleanupStaleEntries(this)
+        // Clean up stale pending medications on app start (in background thread)
+        lifecycleScope.launch(Dispatchers.IO) {
+            PendingMedicationTracker.cleanupStaleEntries(this@MainActivity)
+        }
 
         // Request notification permission for Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -144,6 +151,12 @@ class MainActivity : ComponentActivity() {
                             medicationToEdit = medication
                             tempMedication = Pair(medication.name, medication.photoUri)
                             currentScreen = "edit_reminder"
+                        },
+                        onDebugData = {
+                            currentScreen = "debug_data"
+                        },
+                        onOutstandingMedications = {
+                            currentScreen = "outstanding_medications"
                         }
                     )
                     "add_medication" -> AddMedicationScreen(
@@ -249,6 +262,20 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                    "debug_data" -> {
+                        com.medreminder.app.ui.DebugDataScreen(
+                            onBack = {
+                                currentScreen = "home"
+                            }
+                        )
+                    }
+                    "outstanding_medications" -> {
+                        com.medreminder.app.ui.OutstandingMedicationsScreen(
+                            onBack = {
+                                currentScreen = "home"
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -300,13 +327,16 @@ fun HomeScreen(
     currentLanguage: String = "en",
     onLanguageChange: (String) -> Unit = {},
     onAddMedication: () -> Unit = {},
-    onEditMedication: (Medication) -> Unit = {}
+    onEditMedication: (Medication) -> Unit = {},
+    onDebugData: () -> Unit = {},
+    onOutstandingMedications: () -> Unit = {}
 ) {
     val medications by viewModel.medications.collectAsState(initial = emptyList())
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showTimelineView by remember { mutableStateOf(false) }
+    var timelineViewCounter by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
     // Handle back button press - show exit confirmation
@@ -393,6 +423,45 @@ fun HomeScreen(
                             onClick = {
                                 showMenu = false
                                 showLanguageDialog = true
+                            }
+                        )
+                        Divider()
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Medication, contentDescription = null)
+                                    Text(
+                                        when (currentLanguage) {
+                                            "hi" -> "दवाएं लें"
+                                            "gu" -> "દવા લો"
+                                            else -> "Medications to Take"
+                                        },
+                                        fontSize = 18.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onOutstandingMedications()
+                            }
+                        )
+                        Divider()
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(Icons.Default.BugReport, contentDescription = null)
+                                    Text("Debug Data", fontSize = 18.sp)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onDebugData()
                             }
                         )
                     }
@@ -566,7 +635,10 @@ fun HomeScreen(
                             else
                                 androidx.compose.ui.graphics.Color(0xFFF5F5F5)
                         ),
-                        onClick = { showTimelineView = true }
+                        onClick = {
+                            showTimelineView = true
+                            timelineViewCounter++
+                        }
                     ) {
                         Row(
                             modifier = Modifier.fillMaxSize(),
@@ -631,6 +703,7 @@ fun HomeScreen(
                     TimelineView(
                         medications = medications,
                         currentLanguage = currentLanguage,
+                        viewCounter = timelineViewCounter,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -1109,11 +1182,15 @@ data class MedicationTimeSlot(
 fun TimelineView(
     medications: List<Medication>,
     currentLanguage: String,
+    viewCounter: Int = 0,
     modifier: Modifier = Modifier
 ) {
     println("===== TimelineView START =====")
     println("TimelineView called with ${medications.size} medications")
     Log.d("Timeline", "TimelineView called with ${medications.size} medications")
+
+    // State for showing medication action palette
+    var selectedMedication by remember { mutableStateOf<MedicationTimeSlot?>(null) }
 
     // Parse all medications and their reminder times
     val timeSlots = remember(medications) {
@@ -1253,15 +1330,17 @@ fun TimelineView(
     // Get density for dp to px conversion
     val density = androidx.compose.ui.platform.LocalDensity.current
 
-    // Auto-scroll to upcoming medication hour on first load
-    LaunchedEffect(upcomingHour, density) {
+    // Auto-scroll to upcoming medication hour when view is shown, history changes, or upcoming hour changes
+    LaunchedEffect(upcomingHour, density, viewCounter) {
         // Each hour block is 104dp (100dp width + 4dp spacing)
         // Convert dp to pixels for scrolling
         val scrollPosition = with(density) {
             (upcomingHour * 104).dp.toPx().toInt()
         }
-        Log.d("Timeline", "Scrolling to hour $upcomingHour, position $scrollPosition px")
-        scrollState.animateScrollTo(scrollPosition)
+        Log.d("Timeline", ">>> BEFORE SCROLL: current=${scrollState.value}, target=$scrollPosition, hour=$upcomingHour, historyCount=${todayHistory.size}, viewCounter=$viewCounter")
+        // Use scrollTo for instant scroll, avoiding animation conflicts
+        scrollState.scrollTo(scrollPosition)
+        Log.d("Timeline", ">>> AFTER SCROLL: current=${scrollState.value}")
     }
 
     Column(
@@ -1404,34 +1483,61 @@ fun TimelineView(
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         group.forEach { slot ->
-                                            // Check if this medication time is outstanding (past but not taken)
+                                            // Check if this medication has been taken
                                             val currentCalendar = java.util.Calendar.getInstance()
                                             val currentHour = currentCalendar.get(java.util.Calendar.HOUR_OF_DAY)
                                             val currentMinute = currentCalendar.get(java.util.Calendar.MINUTE)
                                             val currentTimeInMinutes = currentHour * 60 + currentMinute
                                             val slotTimeInMinutes = slot.hour * 60 + slot.minute
-                                            val isOutstanding = slotTimeInMinutes < currentTimeInMinutes &&
-                                                !todayHistory.any { history ->
-                                                    val takenCal = java.util.Calendar.getInstance()
-                                                    takenCal.timeInMillis = history.scheduledTime
-                                                    val matches = history.medicationId == slot.medication.id &&
-                                                        takenCal.get(java.util.Calendar.HOUR_OF_DAY) == slot.hour &&
-                                                        takenCal.get(java.util.Calendar.MINUTE) == slot.minute
-                                                    if (matches) {
-                                                        Log.d("Timeline", "Found match for ${slot.medication.name} at ${slot.hour}:${slot.minute}")
-                                                    }
-                                                    matches
-                                                }
 
-                                            if (slotTimeInMinutes < currentTimeInMinutes) {
-                                                Log.d("Timeline", "Checking ${slot.medication.name} at ${slot.hour}:${slot.minute}: isOutstanding=$isOutstanding, historyCount=${todayHistory.size}")
+                                            val isTaken = todayHistory.any { history ->
+                                                val takenCal = java.util.Calendar.getInstance()
+                                                takenCal.timeInMillis = history.scheduledTime
+                                                val matches = history.medicationId == slot.medication.id &&
+                                                    takenCal.get(java.util.Calendar.HOUR_OF_DAY) == slot.hour &&
+                                                    takenCal.get(java.util.Calendar.MINUTE) == slot.minute
+                                                if (matches) {
+                                                    Log.d("Timeline", "Found match for ${slot.medication.name} at ${slot.hour}:${slot.minute}")
+                                                }
+                                                matches
                                             }
+
+                                            // A medication should only be marked as "outstanding" if:
+                                            // 1. It's in the pending notification tracker (meaning a notification was actually sent)
+                                            // OR
+                                            // 2. It has history (meaning it was taken/skipped, so we know notification was sent)
+                                            val hasPendingNotification = PendingMedicationTracker.getPendingMedications(context)
+                                                .any { it.medicationId == slot.medication.id && it.hour == slot.hour && it.minute == slot.minute }
+
+                                            val hasHistoryForThisTime = todayHistory.any { history ->
+                                                val historyCal = java.util.Calendar.getInstance()
+                                                historyCal.timeInMillis = history.scheduledTime
+                                                history.medicationId == slot.medication.id &&
+                                                    historyCal.get(java.util.Calendar.HOUR_OF_DAY) == slot.hour &&
+                                                    historyCal.get(java.util.Calendar.MINUTE) == slot.minute
+                                            }
+
+                                            // Only mark as outstanding if there's a pending notification that hasn't been taken
+                                            val isOutstanding = hasPendingNotification && !isTaken
+
+                                            // Always log for debugging
+                                            Log.d("Timeline", "=== MEDICATION CHECK ===")
+                                            Log.d("Timeline", "Name: ${slot.medication.name} at ${slot.hour}:${slot.minute}")
+                                            Log.d("Timeline", "Has pending notification? $hasPendingNotification")
+                                            Log.d("Timeline", "Has history for this time? $hasHistoryForThisTime")
+                                            Log.d("Timeline", "Is taken? $isTaken")
+                                            Log.d("Timeline", "Final isOutstanding: $isOutstanding")
+                                            Log.d("Timeline", "========================")
 
                                             Column(
                                                 horizontalAlignment = Alignment.CenterHorizontally
                                             ) {
                                                 // Medication image with border for outstanding meds
-                                                Box {
+                                                Box(
+                                                    modifier = Modifier.clickable {
+                                                        selectedMedication = slot
+                                                    }
+                                                ) {
                                                     if (slot.medication.photoUri != null) {
                                                         Image(
                                                             painter = rememberAsyncImagePainter(
@@ -1507,6 +1613,25 @@ fun TimelineView(
                                                             )
                                                         }
                                                     }
+
+                                                    // Green checkmark badge for taken medications
+                                                    if (isTaken) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .align(Alignment.TopEnd)
+                                                                .offset(x = 4.dp, y = (-4).dp)
+                                                                .size(20.dp)
+                                                                .clip(CircleShape)
+                                                                .background(androidx.compose.ui.graphics.Color(0xFF4CAF50))
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.CheckCircle,
+                                                                contentDescription = "Taken",
+                                                                modifier = Modifier.fillMaxSize(),
+                                                                tint = androidx.compose.ui.graphics.Color.White
+                                                            )
+                                                        }
+                                                    }
                                                 }
 
                                                 // Time label
@@ -1530,9 +1655,23 @@ fun TimelineView(
                             }
                         }
                     }
+
+                    // Add spacer at the end so later hours can scroll into center view
+                    Spacer(modifier = Modifier.width(300.dp))
                 }
             }
         }
+    }
+
+    // Show medication action palette when a medication is selected
+    selectedMedication?.let { slot ->
+        MedicationActionPalette(
+            medication = slot.medication,
+            hour = slot.hour,
+            minute = slot.minute,
+            onDismiss = { selectedMedication = null },
+            currentLanguage = currentLanguage
+        )
     }
 }
 
@@ -1614,6 +1753,189 @@ fun formatHourLabel(hour: Int): String {
         else -> hour
     }
     return String.format("%02d:00\n%s", displayHour, amPm)
+}
+
+// Reaction palette popup for timeline medications
+@Composable
+fun MedicationActionPalette(
+    medication: Medication,
+    hour: Int,
+    minute: Int,
+    onDismiss: () -> Unit,
+    currentLanguage: String = "en"
+) {
+    val context = LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            if (medication.photoUri != null) {
+                Image(
+                    painter = rememberAsyncImagePainter(Uri.parse(medication.photoUri)),
+                    contentDescription = medication.name,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Medication,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        title = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = medication.name,
+                    fontSize = 22.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = String.format("%02d:%02d %s",
+                        if (hour == 0) 12 else if (hour > 12) hour - 12 else hour,
+                        minute,
+                        if (hour >= 12) "PM" else "AM"
+                    ),
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Mark as Taken button
+                Button(
+                    onClick = {
+                        val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
+                            action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_MARK_TAKEN
+                            putExtra("MEDICATION_ID", medication.id)
+                            putExtra("MEDICATION_NAME", medication.name)
+                            putExtra("HOUR", hour)
+                            putExtra("MINUTE", minute)
+                        }
+                        context.sendBroadcast(intent)
+                        onDismiss()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            when (currentLanguage) {
+                                "hi" -> "लिया"
+                                "gu" -> "લીધું"
+                                else -> "Taken"
+                            },
+                            fontSize = 18.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Snooze and Skip buttons in a row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
+                                action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_SNOOZE
+                                putExtra("MEDICATION_ID", medication.id)
+                                putExtra("MEDICATION_NAME", medication.name)
+                                putExtra("MEDICATION_PHOTO_URI", medication.photoUri)
+                                putExtra("HOUR", hour)
+                                putExtra("MINUTE", minute)
+                            }
+                            context.sendBroadcast(intent)
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp)
+                    ) {
+                        Text(
+                            when (currentLanguage) {
+                                "hi" -> "स्नूज़"
+                                "gu" -> "સ્નૂઝ"
+                                else -> "Snooze"
+                            },
+                            fontSize = 16.sp
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
+                                action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_SKIP
+                                putExtra("MEDICATION_ID", medication.id)
+                                putExtra("MEDICATION_NAME", medication.name)
+                                putExtra("HOUR", hour)
+                                putExtra("MINUTE", minute)
+                            }
+                            context.sendBroadcast(intent)
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(
+                            when (currentLanguage) {
+                                "hi" -> "छोड़ें"
+                                "gu" -> "છોડો"
+                                else -> "Skip"
+                            },
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    when (currentLanguage) {
+                        "hi" -> "रद्द करें"
+                        "gu" -> "રદ કરો"
+                        else -> "Cancel"
+                    },
+                    fontSize = 16.sp
+                )
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

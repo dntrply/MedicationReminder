@@ -15,6 +15,9 @@ interface MedicationHistoryDao {
     @Query("SELECT * FROM medication_history ORDER BY takenTime DESC")
     fun getAllHistory(): Flow<List<MedicationHistory>>
 
+    @Query("SELECT * FROM medication_history ORDER BY takenTime DESC")
+    fun getAllHistorySync(): List<MedicationHistory>
+
     @Query("SELECT * FROM medication_history WHERE medicationId = :medicationId ORDER BY takenTime DESC")
     fun getHistoryForMedication(medicationId: Long): Flow<List<MedicationHistory>>
 

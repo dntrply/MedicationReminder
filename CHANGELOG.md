@@ -14,13 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Daily timeline view showing scheduled medications
 - Notification system with repeat reminders
 - Medication history tracking
-- Take medications screen with Taken/Snooze/Skip actions
-- Outstanding medication indicators on timeline
+- **Outstanding Medications screen** - Dedicated full-screen view to manage all pending medications with large, elderly-friendly action buttons
+- **Reaction palette on timeline** - Quick action popup when tapping medication icons in timeline view
+- **Hybrid approach for medication management** - Both dedicated screen (via menu) and quick actions (via timeline tap)
+- Outstanding medication indicators on timeline (red border for pending, green checkmark for taken)
 - Auto-cleanup of stale pending medication data
+- Developer Debug Data viewer with export to JSON functionality
 
 ### Fixed
 - Data inconsistency between notifications and home screen after app restart
 - Pending medication tracker now validates against database on app start
+- **Duplicate notification issue** - Fixed duplicate entries in pending medication tracker by deduplicating on medication ID + hour + minute
+- **Instant UI updates** - Outstanding Medications screen now removes medications immediately when marked as taken
+- **Outstanding medication logic** - Timeline only shows red alerts for medications that actually had notifications sent (not retroactively for late-added reminder times)
+- **Vertical digit stacking** - Fixed hour/minute input fields to always display digits horizontally on smaller screens (Pixel 3a)
 
 ## [1.0.0] - TBD
 

@@ -9,9 +9,16 @@ This app provides medication reminders with visual aids (photos of actual medica
 ## Features (MVP)
 
 - **Add Medications** with photo, name, dosage, and notes
-- **Schedule Reminders** for specific times and days
-- **Visual Notifications** showing medication photo and details
-- **Simple Tracking** to see which medications were taken today
+- **Schedule Reminders** for specific times and days with customizable preset times
+- **Visual Notifications** showing medication photo and details with action buttons
+- **Multiple Ways to Mark Medications Taken**:
+  - From notification actions (Taken/Snooze/Skip)
+  - Dedicated "Medications to Take" screen with large buttons
+  - Quick actions by tapping medication icons in timeline view
+- **Daily Timeline View** showing all scheduled medications with visual status indicators
+- **Multi-language Support** - English, Hindi, and Gujarati
+- **Medication History Tracking** to see which medications were taken and when
+- **Developer Tools** - Debug data viewer with export functionality
 - **Offline-First** - works without internet connection
 
 ## Tech Stack
@@ -102,16 +109,21 @@ See the [docs](./docs) folder for detailed specifications:
 
 ### Version 1.0 (Current - MVP)
 - ✓ Basic medication management
-- ✓ Photo reminders
-- ✓ Simple scheduling
-- ✓ Daily tracking
+- ✓ Photo reminders with camera/gallery support
+- ✓ Flexible scheduling with custom and preset times
+- ✓ Daily timeline view with visual status indicators
+- ✓ Multiple ways to mark medications as taken (notifications, dedicated screen, timeline tap)
+- ✓ Medication history tracking
+- ✓ Multi-language support (English, Hindi, Gujarati)
+- ✓ Developer debug tools
 
 ### Version 2.0 (Future)
 - Caregiver monitoring/alerts
 - Medication refill reminders
-- Export history reports
+- Export history reports (CSV/PDF)
 - Multiple user profiles
 - Cloud backup
+- Voice reminders
 
 ## Contributing
 

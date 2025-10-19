@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#4A90E2</color>
+    <color name="primary_dark">#357ABD</color>
+    <color name="primary_light">#A8D0F5</color>
+
+    <!-- Accent Colors -->
+    <color name="success">#5CB85C</color>
+    <color name="warning">#F0AD4E</color>
+    <color name="error">#D9534F</color>
+
+    <!-- Background Colors -->
+    <color name="background">#FAFAFA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F5F5F5</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_disabled">#BDBDBD</color>
+
+    <!-- System Colors -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Card States -->
+    <color name="card_default">#FFFFFF</color>
+    <color name="card_due_now">#FFF8E1</color>
+    <color name="card_taken">#E8F5E9</color>
+    <color name="card_missed">#FFEBEE</color>
+</resources>

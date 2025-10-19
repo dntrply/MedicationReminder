@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">દવા રીમાઇન્ડર</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">દવા રીમાઇન્ડર</string>
+    <string name="no_medications">હજી સુધી કોઈ દવા નથી</string>
+    <string name="add_first_medication">તમારી પ્રથમ દવા ઉમેરવા માટે + પર ટૅપ કરો</string>
+    <string name="add_medication">દવા ઉમેરો</string>
+
+    <!-- Welcome Screen Features -->
+    <string name="feature_schedule">શેડ્યૂલ અને ટ્રૅક કરો</string>
+    <string name="feature_notify">સ્માર્ટ રીમાઇન્ડર્સ</string>
+    <string name="feature_history">ઇતિહાસ જુઓ</string>
+
+    <string name="today">આજે</string>
+    <string name="next_reminder">આગળ: %s</string>
+    <string name="last_taken">છેલ્લે લીધેલ: %s</string>
+    <string name="taken_today">લીધેલ: આજે %s</string>
+
+    <!-- Add/Edit Medication -->
+    <string name="medication_name">દવાનું નામ</string>
+    <string name="medication_name_hint">ઉદાહરણ: એસ્પિરિન</string>
+    <string name="medication_name_required">દવાનું નામ જરૂરી છે</string>
+    <string name="photo">ફોટો</string>
+    <string name="add_photo">ફોટો ઉમેરો</string>
+    <string name="take_photo">ફોટો લો</string>
+    <string name="choose_from_gallery">ગેલેરીમાંથી પસંદ કરો</string>
+    <string name="dosage_instructions">માત્રા / સૂચનાઓ</string>
+    <string name="dosage_hint">ઉદાહરણ: 1 ગોળી</string>
+    <string name="notes">નોંધો (વૈકલ્પિક)</string>
+    <string name="notes_hint">ઉદાહરણ: ખોરાક સાથે લો</string>
+    <string name="next">આગળ</string>
+    <string name="save">સાચવો</string>
+    <string name="cancel">રદ કરો</string>
+    <string name="delete">કાઢી નાખો</string>
+    <string name="edit_medication">દવા સંપાદિત કરો</string>
+
+    <!-- Medication Times -->
+    <string name="set_reminder_times">ક્યારે લેવું છે</string>
+    <string name="when_remind">તમે આ ક્યારે લો છો?</string>
+    <string name="add_another_time">બીજો સમય ઉમેરો</string>
+    <string name="repeat_on">પુનરાવર્તન:</string>
+    <string name="time_required">ઓછામાં ઓછો એક સમય જરૂરી છે</string>
+
+    <!-- Days of week -->
+    <string name="monday">સો</string>
+    <string name="tuesday">મં</string>
+    <string name="wednesday">બુ</string>
+    <string name="thursday">ગુ</string>
+    <string name="friday">શુ</string>
+    <string name="saturday">શ</string>
+    <string name="sunday">ર</string>
+    <string name="monday_full">સોમવાર</string>
+    <string name="tuesday_full">મંગળવાર</string>
+    <string name="wednesday_full">બુધવાર</string>
+    <string name="thursday_full">ગુરુવાર</string>
+    <string name="friday_full">શુક્રવાર</string>
+    <string name="saturday_full">શનિવાર</string>
+    <string name="sunday_full">રવિવાર</string>
+
+    <!-- Reminder Screen -->
+    <string name="medication_reminder">દવા રીમાઇન્ડર</string>
+    <string name="time_to_take">%s લેવાનો સમય</string>
+    <string name="scheduled_for">નિર્ધારિત: %s</string>
+    <string name="ive_taken_it">મેં લીધી છે</string>
+    <string name="remind_me_later">10 મિનિટમાં યાદ અપાવો</string>
+    <string name="dismiss">રદ કરો</string>
+    <string name="marked_as_taken">લીધેલ તરીકે ચિહ્નિત</string>
+    <string name="reminder_snoozed">રીમાઇન્ડર 10 મિનિટ માટે સ્નૂઝ થયું</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">દવા રીમાઇન્ડર્સ</string>
+    <string name="notification_channel_description">તમારી દવાઓ લેવા માટે રીમાઇન્ડર્સ</string>
+    <string name="notification_title">%s લેવાનો સમય</string>
+    <string name="notification_text">%s</string>
+    <string name="multiple_medications">%d દવાઓ માટે સમય</string>
+
+    <!-- Settings -->
+    <string name="settings">સેટિંગ્સ</string>
+    <string name="notification_sound">નોટિફિકેશન ધ્વનિ</string>
+    <string name="snooze_duration">સ્નૂઝ અવધિ</string>
+    <string name="about">વિશે</string>
+
+    <!-- Confirmations -->
+    <string name="delete_medication_title">દવા કાઢી નાખો?</string>
+    <string name="delete_medication_message">શું તમે ખરેખર %s ને કાઢી નાખવા માંગો છો? બધા રીમાઇન્ડર્સ અને ઇતિહાસ દૂર કરવામાં આવશે.</string>
+    <string name="delete_confirm">કાઢી નાખો</string>
+
+    <!-- Permissions -->
+    <string name="camera_permission_required">ફોટા લેવા માટે કૅમેરા પરવાનગી જરૂરી છે</string>
+    <string name="notification_permission_required">રીમાઇન્ડર્સ માટે નોટિફિકેશન પરવાનગી જરૂરી છે</string>
+    <string name="grant_permission">પરવાનગી આપો</string>
+
+    <!-- Errors -->
+    <string name="error_saving_medication">દવા સાચવવામાં ભૂલ</string>
+    <string name="error_loading_medications">દવાઓ લોડ કરવામાં ભૂલ</string>
+    <string name="error_taking_photo">ફોટો લેવામાં ભૂલ</string>
+
+    <!-- Content Descriptions (Accessibility) -->
+    <string name="medication_photo">દવાનો ફોટો</string>
+    <string name="delete_time">આ રીમાઇન્ડર સમય કાઢી નાખો</string>
+    <string name="medication_taken_indicator">આજે દવા લીધી</string>
+</resources>

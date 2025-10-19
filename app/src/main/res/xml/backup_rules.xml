@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Include the database for backup -->
+    <include domain="database" path="medication_reminder.db"/>
+</full-backup-content>

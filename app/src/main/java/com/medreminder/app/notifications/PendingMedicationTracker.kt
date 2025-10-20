@@ -2,6 +2,13 @@ package com.medreminder.app.notifications
 
 import android.content.Context
 import android.util.Log
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.medreminder.app.data.userPrefs
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -21,8 +28,7 @@ import org.json.JSONObject
  */
 object PendingMedicationTracker {
     private const val TAG = "PendingMedTracker"
-    private const val PREFS_NAME = "pending_medications"
-    private const val KEY_PENDING = "pending_list"
+    private val KEY_PENDING = stringPreferencesKey("pending_list")
 
     data class PendingMedication(
         val medicationId: Long,
@@ -37,7 +43,6 @@ object PendingMedicationTracker {
      * Add a medication to the pending list when its notification is shown
      */
     fun addPendingMedication(context: Context, medication: PendingMedication) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val pending = getPendingMedications(context).toMutableList()
 
         // Remove any existing entry for this EXACT medication (same ID, hour, and minute)
@@ -55,7 +60,7 @@ object PendingMedicationTracker {
         val cutoffTime = System.currentTimeMillis() - (2 * 60 * 60 * 1000)
         pending.removeAll { it.timestamp < cutoffTime }
 
-        // Save to preferences
+        // Save to DataStore
         val jsonArray = JSONArray()
         pending.forEach { med ->
             val jsonObj = JSONObject().apply {
@@ -69,7 +74,11 @@ object PendingMedicationTracker {
             jsonArray.put(jsonObj)
         }
 
-        prefs.edit().putString(KEY_PENDING, jsonArray.toString()).apply()
+        runBlocking {
+            context.userPrefs.edit { prefs ->
+                prefs[KEY_PENDING] = jsonArray.toString()
+            }
+        }
         Log.d(TAG, "Added pending medication: ${medication.medicationName} at ${medication.hour}:${medication.minute}, total pending: ${pending.size}")
     }
 
@@ -77,7 +86,6 @@ object PendingMedicationTracker {
      * Remove a medication from the pending list when user takes action
      */
     fun removePendingMedication(context: Context, medicationId: Long) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val pending = getPendingMedications(context).toMutableList()
 
         pending.removeAll { it.medicationId == medicationId }
@@ -95,7 +103,11 @@ object PendingMedicationTracker {
             jsonArray.put(jsonObj)
         }
 
-        prefs.edit().putString(KEY_PENDING, jsonArray.toString()).apply()
+        runBlocking {
+            context.userPrefs.edit { prefs ->
+                prefs[KEY_PENDING] = jsonArray.toString()
+            }
+        }
         Log.d(TAG, "Removed pending medication ID: $medicationId, remaining: ${pending.size}")
     }
 
@@ -103,7 +115,6 @@ object PendingMedicationTracker {
      * Remove all pending medications at a specific time
      */
     fun removePendingMedicationsAtTime(context: Context, hour: Int, minute: Int) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val pending = getPendingMedications(context).toMutableList()
 
         pending.removeAll { it.hour == hour && it.minute == minute }
@@ -121,7 +132,11 @@ object PendingMedicationTracker {
             jsonArray.put(jsonObj)
         }
 
-        prefs.edit().putString(KEY_PENDING, jsonArray.toString()).apply()
+        runBlocking {
+            context.userPrefs.edit { prefs ->
+                prefs[KEY_PENDING] = jsonArray.toString()
+            }
+        }
         Log.d(TAG, "Removed all pending medications at $hour:$minute, remaining: ${pending.size}")
     }
 
@@ -129,32 +144,38 @@ object PendingMedicationTracker {
      * Get all pending medications
      */
     fun getPendingMedications(context: Context): List<PendingMedication> {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val jsonString = prefs.getString(KEY_PENDING, null) ?: return emptyList()
+        val jsonString = runBlocking {
+            context.userPrefs.data.first()[KEY_PENDING]
+        } ?: return emptyList()
+        return parsePending(jsonString)
+    }
 
-        return try {
-            val jsonArray = JSONArray(jsonString)
-            val medications = mutableListOf<PendingMedication>()
-
-            for (i in 0 until jsonArray.length()) {
-                val jsonObj = jsonArray.getJSONObject(i)
-                medications.add(
-                    PendingMedication(
-                        medicationId = jsonObj.getLong("medicationId"),
-                        medicationName = jsonObj.getString("medicationName"),
-                        medicationPhotoUri = jsonObj.getString("medicationPhotoUri").takeIf { it.isNotEmpty() },
-                        hour = jsonObj.getInt("hour"),
-                        minute = jsonObj.getInt("minute"),
-                        timestamp = jsonObj.getLong("timestamp")
-                    )
-                )
-            }
-
-            medications
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parsing pending medications", e)
-            emptyList()
+    fun pendingMedicationsFlow(context: Context): Flow<List<PendingMedication>> {
+        return context.userPrefs.data.map { prefs ->
+            prefs[KEY_PENDING]?.let { parsePending(it) } ?: emptyList()
         }
+    }
+
+    private fun parsePending(jsonString: String): List<PendingMedication> = try {
+        val jsonArray = JSONArray(jsonString)
+        val medications = mutableListOf<PendingMedication>()
+        for (i in 0 until jsonArray.length()) {
+            val jsonObj = jsonArray.getJSONObject(i)
+            medications.add(
+                PendingMedication(
+                    medicationId = jsonObj.getLong("medicationId"),
+                    medicationName = jsonObj.getString("medicationName"),
+                    medicationPhotoUri = jsonObj.getString("medicationPhotoUri").takeIf { it.isNotEmpty() },
+                    hour = jsonObj.getInt("hour"),
+                    minute = jsonObj.getInt("minute"),
+                    timestamp = jsonObj.getLong("timestamp")
+                )
+            )
+        }
+        medications
+    } catch (e: Exception) {
+        Log.e(TAG, "Error parsing pending medications", e)
+        emptyList()
     }
 
     /**
@@ -168,8 +189,11 @@ object PendingMedicationTracker {
      * Clear all pending medications
      */
     fun clearAll(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().clear().apply()
+        runBlocking {
+            context.userPrefs.edit { prefs ->
+                prefs.remove(KEY_PENDING)
+            }
+        }
         Log.d(TAG, "Cleared all pending medications")
     }
 
@@ -205,8 +229,7 @@ object PendingMedicationTracker {
         }
 
         if (pending.size < initialSize) {
-            // Save the cleaned list
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            // Save the cleaned list to DataStore
             val jsonArray = JSONArray()
             pending.forEach { med ->
                 val jsonObj = JSONObject().apply {
@@ -219,7 +242,11 @@ object PendingMedicationTracker {
                 }
                 jsonArray.put(jsonObj)
             }
-            prefs.edit().putString(KEY_PENDING, jsonArray.toString()).apply()
+            runBlocking {
+                context.userPrefs.edit { prefs ->
+                    prefs[KEY_PENDING] = jsonArray.toString()
+                }
+            }
             Log.d(TAG, "Cleaned up stale entries: removed ${initialSize - pending.size} entries")
         }
     }

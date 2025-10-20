@@ -1,6 +1,13 @@
 package com.medreminder.app.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 
 data class PresetTimes(
     val morningHour: Int = 8,
@@ -14,42 +21,49 @@ data class PresetTimes(
 )
 
 object PresetTimesManager {
-    private const val PREFS_NAME = "preset_times"
-    private const val KEY_MORNING_HOUR = "morning_hour"
-    private const val KEY_MORNING_MINUTE = "morning_minute"
-    private const val KEY_LUNCH_HOUR = "lunch_hour"
-    private const val KEY_LUNCH_MINUTE = "lunch_minute"
-    private const val KEY_EVENING_HOUR = "evening_hour"
-    private const val KEY_EVENING_MINUTE = "evening_minute"
-    private const val KEY_BEDTIME_HOUR = "bedtime_hour"
-    private const val KEY_BEDTIME_MINUTE = "bedtime_minute"
+    private val MORNING_HOUR = intPreferencesKey("morning_hour")
+    private val MORNING_MINUTE = intPreferencesKey("morning_minute")
+    private val LUNCH_HOUR = intPreferencesKey("lunch_hour")
+    private val LUNCH_MINUTE = intPreferencesKey("lunch_minute")
+    private val EVENING_HOUR = intPreferencesKey("evening_hour")
+    private val EVENING_MINUTE = intPreferencesKey("evening_minute")
+    private val BEDTIME_HOUR = intPreferencesKey("bedtime_hour")
+    private val BEDTIME_MINUTE = intPreferencesKey("bedtime_minute")
 
-    fun getPresetTimes(context: Context): PresetTimes {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return PresetTimes(
-            morningHour = prefs.getInt(KEY_MORNING_HOUR, 8),
-            morningMinute = prefs.getInt(KEY_MORNING_MINUTE, 0),
-            lunchHour = prefs.getInt(KEY_LUNCH_HOUR, 12),
-            lunchMinute = prefs.getInt(KEY_LUNCH_MINUTE, 0),
-            eveningHour = prefs.getInt(KEY_EVENING_HOUR, 18),
-            eveningMinute = prefs.getInt(KEY_EVENING_MINUTE, 0),
-            bedtimeHour = prefs.getInt(KEY_BEDTIME_HOUR, 22),
-            bedtimeMinute = prefs.getInt(KEY_BEDTIME_MINUTE, 0)
-        )
+    fun getPresetTimesFlow(context: Context): Flow<PresetTimes> {
+        return context.userPrefs.data.map { prefs ->
+            prefs.toPresetTimes()
+        }
     }
 
-    fun savePresetTimes(context: Context, presetTimes: PresetTimes) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_MORNING_HOUR, presetTimes.morningHour)
-            .putInt(KEY_MORNING_MINUTE, presetTimes.morningMinute)
-            .putInt(KEY_LUNCH_HOUR, presetTimes.lunchHour)
-            .putInt(KEY_LUNCH_MINUTE, presetTimes.lunchMinute)
-            .putInt(KEY_EVENING_HOUR, presetTimes.eveningHour)
-            .putInt(KEY_EVENING_MINUTE, presetTimes.eveningMinute)
-            .putInt(KEY_BEDTIME_HOUR, presetTimes.bedtimeHour)
-            .putInt(KEY_BEDTIME_MINUTE, presetTimes.bedtimeMinute)
-            .apply()
+    // Synchronous convenience method (used rarely)
+    fun getPresetTimes(context: Context): PresetTimes =
+        runBlocking { context.userPrefs.data.map { it.toPresetTimes() }.first() }
+
+    suspend fun savePresetTimes(context: Context, presetTimes: PresetTimes) {
+        context.userPrefs.edit { prefs ->
+            prefs[MORNING_HOUR] = presetTimes.morningHour
+            prefs[MORNING_MINUTE] = presetTimes.morningMinute
+            prefs[LUNCH_HOUR] = presetTimes.lunchHour
+            prefs[LUNCH_MINUTE] = presetTimes.lunchMinute
+            prefs[EVENING_HOUR] = presetTimes.eveningHour
+            prefs[EVENING_MINUTE] = presetTimes.eveningMinute
+            prefs[BEDTIME_HOUR] = presetTimes.bedtimeHour
+            prefs[BEDTIME_MINUTE] = presetTimes.bedtimeMinute
+        }
+    }
+
+    private fun Preferences.toPresetTimes(): PresetTimes {
+        return PresetTimes(
+            morningHour = this[MORNING_HOUR] ?: 8,
+            morningMinute = this[MORNING_MINUTE] ?: 0,
+            lunchHour = this[LUNCH_HOUR] ?: 12,
+            lunchMinute = this[LUNCH_MINUTE] ?: 0,
+            eveningHour = this[EVENING_HOUR] ?: 18,
+            eveningMinute = this[EVENING_MINUTE] ?: 0,
+            bedtimeHour = this[BEDTIME_HOUR] ?: 22,
+            bedtimeMinute = this[BEDTIME_MINUTE] ?: 0
+        )
     }
 }
 

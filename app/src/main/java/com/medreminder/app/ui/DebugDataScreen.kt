@@ -1,12 +1,16 @@
 package com.medreminder.app.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +24,9 @@ import com.medreminder.app.data.Medication
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.MedicationHistory
 import com.medreminder.app.notifications.PendingMedicationTracker
+import com.medreminder.app.data.SettingsStore
+import com.medreminder.app.data.PresetTimes
+import com.medreminder.app.data.PresetTimesManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -40,6 +47,16 @@ fun DebugDataScreen(
     var pendingMeds by remember { mutableStateOf<List<PendingMedicationTracker.PendingMedication>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
+
+    // Preferences (DataStore)
+    val currentLanguage by SettingsStore.languageFlow(context).collectAsState(initial = "en")
+    val presetTimes by PresetTimesManager.getPresetTimesFlow(context).collectAsState(initial = PresetTimes())
+
+    // Collapsible section state
+    var prefsExpanded by remember { mutableStateOf(true) }
+    var medsExpanded by remember { mutableStateOf(true) }
+    var historyExpanded by remember { mutableStateOf(true) }
+    var pendingExpanded by remember { mutableStateOf(true) }
 
     val loadData: () -> Unit = {
         isLoading = true
@@ -161,6 +178,44 @@ fun DebugDataScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Preferences overview (collapsible)
+                item {
+                    CollapsibleSectionHeader(
+                        title = "PREFERENCES",
+                        expanded = prefsExpanded,
+                        onToggle = { prefsExpanded = !prefsExpanded }
+                    )
+                }
+                if (prefsExpanded) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                DataRow("Language", currentLanguage)
+                                DataRow(
+                                    "Morning",
+                                    String.format("%02d:%02d", presetTimes.morningHour, presetTimes.morningMinute)
+                                )
+                                DataRow(
+                                    "Lunch",
+                                    String.format("%02d:%02d", presetTimes.lunchHour, presetTimes.lunchMinute)
+                                )
+                                DataRow(
+                                    "Evening",
+                                    String.format("%02d:%02d", presetTimes.eveningHour, presetTimes.eveningMinute)
+                                )
+                                DataRow(
+                                    "Bedtime",
+                                    String.format("%02d:%02d", presetTimes.bedtimeHour, presetTimes.bedtimeMinute)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 exportMessage?.let { message ->
                     item {
                         Card(
@@ -177,84 +232,114 @@ fun DebugDataScreen(
                     }
                 }
 
+                // Medications (collapsible)
                 item {
-                    Text(
-                        "MEDICATIONS (${medications.size})",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    CollapsibleSectionHeader(
+                        title = "MEDICATIONS (${medications.size})",
+                        expanded = medsExpanded,
+                        onToggle = { medsExpanded = !medsExpanded }
                     )
                 }
-
-                if (medications.isEmpty()) {
-                    item {
-                        Card {
-                            Text(
-                                "No medications in database",
-                                modifier = Modifier.padding(16.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                if (medsExpanded) {
+                    if (medications.isEmpty()) {
+                        item {
+                            Card {
+                                Text(
+                                    "No medications in database",
+                                    modifier = Modifier.padding(16.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                } else {
-                    items(medications) { med ->
-                        MedicationDebugCard(med)
+                    } else {
+                        items(medications) { med ->
+                            MedicationDebugCard(med)
+                        }
                     }
                 }
 
+                // History (collapsible)
+                item { Spacer(modifier = Modifier.height(8.dp)) }
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "MEDICATION HISTORY (${history.size})",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    CollapsibleSectionHeader(
+                        title = "MEDICATION HISTORY (${history.size})",
+                        expanded = historyExpanded,
+                        onToggle = { historyExpanded = !historyExpanded }
                     )
                 }
-
-                if (history.isEmpty()) {
-                    item {
-                        Card {
-                            Text(
-                                "No history in database",
-                                modifier = Modifier.padding(16.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                if (historyExpanded) {
+                    if (history.isEmpty()) {
+                        item {
+                            Card {
+                                Text(
+                                    "No history in database",
+                                    modifier = Modifier.padding(16.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                } else {
-                    items(history) { h ->
-                        HistoryDebugCard(h)
+                    } else {
+                        items(history) { h ->
+                            HistoryDebugCard(h)
+                        }
                     }
                 }
 
+                // Pending (collapsible)
+                item { Spacer(modifier = Modifier.height(8.dp)) }
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "PENDING MEDICATIONS (${pendingMeds.size})",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    CollapsibleSectionHeader(
+                        title = "PENDING MEDICATIONS (${pendingMeds.size})",
+                        expanded = pendingExpanded,
+                        onToggle = { pendingExpanded = !pendingExpanded }
                     )
                 }
-
-                if (pendingMeds.isEmpty()) {
-                    item {
-                        Card {
-                            Text(
-                                "No pending medications",
-                                modifier = Modifier.padding(16.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                if (pendingExpanded) {
+                    if (pendingMeds.isEmpty()) {
+                        item {
+                            Card {
+                                Text(
+                                    "No pending medications",
+                                    modifier = Modifier.padding(16.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                } else {
-                    items(pendingMeds) { p ->
-                        PendingMedDebugCard(p)
+                    } else {
+                        items(pendingMeds) { p ->
+                            PendingMedDebugCard(p)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun CollapsibleSectionHeader(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            title,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = if (expanded) "Collapse" else "Expand"
+        )
     }
 }
 

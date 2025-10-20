@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.medreminder.app.data.PresetTimes
 import com.medreminder.app.data.PresetTimesManager
+import com.medreminder.app.data.SettingsStore
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,11 +28,16 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
 
-    var presets by remember { mutableStateOf(PresetTimesManager.getPresetTimes(context)) }
+    val presetsFromStore by PresetTimesManager.getPresetTimesFlow(context)
+        .collectAsState(initial = PresetTimes())
+    var presets by remember { mutableStateOf(presetsFromStore) }
+    LaunchedEffect(presetsFromStore) { presets = presetsFromStore }
 
-    // Auto-save preset changes
-    LaunchedEffect(presets) {
-        PresetTimesManager.savePresetTimes(context, presets)
+    val scope = rememberCoroutineScope()
+    fun updatePresets(builder: (PresetTimes) -> PresetTimes) {
+        val updated = builder(presets)
+        presets = updated
+        scope.launch { PresetTimesManager.savePresetTimes(context, updated) }
     }
 
     Scaffold(
@@ -124,8 +131,8 @@ fun SettingsScreen(
                 },
                 hour = presets.morningHour,
                 minute = presets.morningMinute,
-                onHourChange = { presets = presets.copy(morningHour = it) },
-                onMinuteChange = { presets = presets.copy(morningMinute = it) }
+                onHourChange = { newHour -> updatePresets { p -> p.copy(morningHour = newHour) } },
+                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(morningMinute = newMinute) } }
             )
 
             TimePresetRow(
@@ -136,8 +143,8 @@ fun SettingsScreen(
                 },
                 hour = presets.lunchHour,
                 minute = presets.lunchMinute,
-                onHourChange = { presets = presets.copy(lunchHour = it) },
-                onMinuteChange = { presets = presets.copy(lunchMinute = it) }
+                onHourChange = { newHour -> updatePresets { p -> p.copy(lunchHour = newHour) } },
+                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(lunchMinute = newMinute) } }
             )
 
             TimePresetRow(
@@ -148,8 +155,8 @@ fun SettingsScreen(
                 },
                 hour = presets.eveningHour,
                 minute = presets.eveningMinute,
-                onHourChange = { presets = presets.copy(eveningHour = it) },
-                onMinuteChange = { presets = presets.copy(eveningMinute = it) }
+                onHourChange = { newHour -> updatePresets { p -> p.copy(eveningHour = newHour) } },
+                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(eveningMinute = newMinute) } }
             )
 
             TimePresetRow(
@@ -160,8 +167,8 @@ fun SettingsScreen(
                 },
                 hour = presets.bedtimeHour,
                 minute = presets.bedtimeMinute,
-                onHourChange = { presets = presets.copy(bedtimeHour = it) },
-                onMinuteChange = { presets = presets.copy(bedtimeMinute = it) }
+                onHourChange = { newHour -> updatePresets { p -> p.copy(bedtimeHour = newHour) } },
+                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(bedtimeMinute = newMinute) } }
             )
 
         }

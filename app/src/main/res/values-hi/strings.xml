@@ -36,6 +36,21 @@
     <string name="delete">हटाएं</string>
     <string name="edit_medication">दवा संपादित करें</string>
 
+    <!-- Audio Notes -->
+    <string name="audio_note">ऑडियो नोट</string>
+    <string name="add_audio_note">ऑडियो नोट जोड़ें</string>
+    <string name="record_audio">ऑडियो रिकॉर्ड करें</string>
+    <string name="recording">रिकॉर्डिंग…</string>
+    <string name="stop_recording">रिकॉर्डिंग बंद करें</string>
+    <string name="play_audio">ऑडियो चलाएं</string>
+    <string name="stop_playback">प्लेबैक बंद करें</string>
+    <string name="delete_audio">ऑडियो नोट हटाएं</string>
+    <string name="audio_instructions">निर्देश रिकॉर्ड करें (अधिकतम 60 सेकंड)</string>
+    <string name="audio_note_hint">उदाहरण: नाश्ते से पहले लें</string>
+    <string name="recording_time">रिकॉर्डिंग: %s</string>
+    <string name="audio_duration">अवधि: %s</string>
+    <string name="has_audio_note">ऑडियो निर्देश हैं</string>
+
     <!-- Medication Times -->
     <string name="set_reminder_times">कब लेना है</string>
     <string name="when_remind">आप इसे कब लेते हैं?</string>

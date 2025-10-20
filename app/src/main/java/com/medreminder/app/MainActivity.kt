@@ -110,8 +110,15 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<Medication?>(null)
                 }
 
+                // Data class for temporary medication data during add/edit flow
+                data class TempMedicationData(
+                    val name: String,
+                    val photoUri: String?,
+                    val audioPath: String?
+                )
+
                 var tempMedication by remember {
-                    mutableStateOf<Pair<String, String?>?>(null) // name, photoUri
+                    mutableStateOf<TempMedicationData?>(null)
                 }
 
                 var medicationToEdit by remember {
@@ -149,7 +156,11 @@ class MainActivity : ComponentActivity() {
                         },
                         onEditMedication = { medication ->
                             medicationToEdit = medication
-                            tempMedication = Pair(medication.name, medication.photoUri)
+                            tempMedication = TempMedicationData(
+                                medication.name,
+                                medication.photoUri,
+                                medication.audioNotePath
+                            )
                             currentScreen = "edit_reminder"
                         },
                         onDebugData = {
@@ -161,38 +172,40 @@ class MainActivity : ComponentActivity() {
                     )
                     "add_medication" -> AddMedicationScreen(
                         currentLanguage = currentLanguage,
-                        initialName = tempMedication?.first ?: "",
-                        initialPhotoUri = tempMedication?.second,
+                        initialName = tempMedication?.name ?: "",
+                        initialPhotoUri = tempMedication?.photoUri,
+                        initialAudioPath = tempMedication?.audioPath,
                         onBack = {
                             tempMedication = null
                             currentScreen = "home"
                         },
-                        onNext = { name, photoUri ->
-                            tempMedication = Pair(name, photoUri)
+                        onNext = { name, photoUri, audioPath ->
+                            tempMedication = TempMedicationData(name, photoUri, audioPath)
                             currentScreen = "set_reminder"
                         }
                     )
                     "edit_medication" -> medicationToEdit?.let { medication ->
                         AddMedicationScreen(
                             currentLanguage = currentLanguage,
-                            initialName = tempMedication?.first ?: medication.name,
-                            initialPhotoUri = tempMedication?.second ?: medication.photoUri,
+                            initialName = tempMedication?.name ?: medication.name,
+                            initialPhotoUri = tempMedication?.photoUri ?: medication.photoUri,
+                            initialAudioPath = tempMedication?.audioPath ?: medication.audioNotePath,
                             onBack = {
                                 tempMedication = null
                                 medicationToEdit = null
                                 currentScreen = "home"
                             },
-                            onNext = { name, photoUri ->
-                                tempMedication = Pair(name, photoUri)
+                            onNext = { name, photoUri, audioPath ->
+                                tempMedication = TempMedicationData(name, photoUri, audioPath)
                                 currentScreen = "edit_reminder"
                             }
                         )
                     }
-                    "set_reminder" -> tempMedication?.let { (name, photoUri) ->
+                    "set_reminder" -> tempMedication?.let { tempData ->
                         SetReminderTimesScreen(
                             currentLanguage = currentLanguage,
-                            medicationName = name,
-                            medicationPhotoUri = photoUri,
+                            medicationName = tempData.name,
+                            medicationPhotoUri = tempData.photoUri,
                             onBack = {
                                 // Save and navigate home when back is pressed
                                 tempMedication = null
@@ -206,19 +219,20 @@ class MainActivity : ComponentActivity() {
                                 val jsonArray = "[$reminderJson]"
 
                                 medicationToSave = Medication(
-                                    name = name,
-                                    photoUri = photoUri,
+                                    name = tempData.name,
+                                    photoUri = tempData.photoUri,
+                                    audioNotePath = tempData.audioPath,
                                     reminderTimesJson = jsonArray
                                 )
                             }
                         )
                     }
                     "edit_reminder" -> medicationToEdit?.let { medication ->
-                        tempMedication?.let { (name, photoUri) ->
+                        tempMedication?.let { tempData ->
                             SetReminderTimesScreen(
                                 currentLanguage = currentLanguage,
-                                medicationName = name,
-                                medicationPhotoUri = photoUri,
+                                medicationName = tempData.name,
+                                medicationPhotoUri = tempData.photoUri,
                                 initialReminderTimes = medication.reminderTimesJson,
                                 onBack = {
                                     // Navigate home when back is pressed
@@ -235,8 +249,9 @@ class MainActivity : ComponentActivity() {
 
                                     // Update existing medication
                                     val updatedMedication = medication.copy(
-                                        name = name,
-                                        photoUri = photoUri,
+                                        name = tempData.name,
+                                        photoUri = tempData.photoUri,
+                                        audioNotePath = tempData.audioPath,
                                         reminderTimesJson = jsonArray
                                     )
                                     viewModel.updateMedication(updatedMedication)
@@ -1944,8 +1959,9 @@ fun AddMedicationScreen(
     currentLanguage: String = "en",
     initialName: String = "",
     initialPhotoUri: String? = null,
+    initialAudioPath: String? = null,
     onBack: () -> Unit,
-    onNext: (String, String?) -> Unit // name, photoUri
+    onNext: (String, String?, String?) -> Unit // name, photoUri, audioPath
 ) {
     var medicationName by remember { mutableStateOf(initialName) }
     var showPhotoOptions by remember { mutableStateOf(false) }
@@ -1954,7 +1970,46 @@ fun AddMedicationScreen(
     }
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
+    // Audio recording state
+    var audioPath by remember { mutableStateOf(initialAudioPath) }
+    var isRecording by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var recordingDuration by remember { mutableStateOf(0L) }
+
     val context = LocalContext.current
+
+    // Debug logging for audio path
+    LaunchedEffect(initialAudioPath) {
+        Log.d("AddMedicationScreen", "=== AUDIO PATH DEBUG ===")
+        Log.d("AddMedicationScreen", "Initial audio path: $initialAudioPath")
+        Log.d("AddMedicationScreen", "Current audio path: $audioPath")
+        if (initialAudioPath != null) {
+            val file = java.io.File(initialAudioPath)
+            Log.d("AddMedicationScreen", "File exists: ${file.exists()}")
+            Log.d("AddMedicationScreen", "File size: ${if (file.exists()) file.length() else 0} bytes")
+        }
+    }
+    val audioRecorder = remember { com.medreminder.app.utils.AudioRecorder(context) }
+    val audioPlayer = remember { com.medreminder.app.utils.AudioPlayer(context) }
+
+    // Update recording duration every second while recording
+    LaunchedEffect(isRecording) {
+        while (isRecording) {
+            recordingDuration = audioRecorder.getRecordingDuration()
+            kotlinx.coroutines.delay(100)
+        }
+    }
+
+    // Cleanup audio resources when screen is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            // Only cancel if actively recording (don't delete saved files!)
+            if (isRecording) {
+                audioRecorder.cancelRecording()
+            }
+            audioPlayer.release()
+        }
+    }
 
     // Create a temporary file for camera photos
     fun createImageFile(): Uri {
@@ -2005,6 +2060,20 @@ fun AddMedicationScreen(
     ) { isGranted ->
         if (isGranted || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
             galleryLauncher.launch("image/*")
+        }
+    }
+
+    // Audio permission launcher
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Start recording
+            val file = audioRecorder.startRecording()
+            if (file != null) {
+                isRecording = true
+                recordingDuration = 0L
+            }
         }
     }
 
@@ -2163,11 +2232,181 @@ fun AddMedicationScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Audio Note Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.audio_instructions),
+                        fontSize = 18.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+
+                    if (audioPath != null) {
+                        // Show audio controls when audio exists
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AudioFile,
+                                contentDescription = null,
+                                tint = androidx.compose.ui.graphics.Color(0xFF4A90E2),
+                                modifier = Modifier.size(32.dp)
+                            )
+
+                            // Play/Stop button
+                            Button(
+                                onClick = {
+                                    if (isPlaying) {
+                                        audioPlayer.stop()
+                                        isPlaying = false
+                                    } else {
+                                        audioPlayer.play(
+                                            audioPath,
+                                            onCompletion = { isPlaying = false },
+                                            onError = { isPlaying = false }
+                                        )
+                                        isPlaying = true
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (isPlaying) stringResource(R.string.stop_playback) else stringResource(R.string.play_audio),
+                                    fontSize = 16.sp
+                                )
+                            }
+
+                            // Delete button
+                            IconButton(
+                                onClick = {
+                                    audioPlayer.stop()
+                                    audioRecorder.deleteAudioFile(audioPath)
+                                    audioPath = null
+                                    isPlaying = false
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.delete_audio),
+                                    tint = androidx.compose.ui.graphics.Color(0xFFE53935),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    } else if (isRecording) {
+                        // Show recording controls
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .clip(CircleShape)
+                                        .background(androidx.compose.ui.graphics.Color.Red)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = String.format("%02d:%02d", recordingDuration / 1000 / 60, recordingDuration / 1000 % 60),
+                                    fontSize = 24.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = androidx.compose.ui.graphics.Color.Red
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Stop and Save button
+                                Button(
+                                    onClick = {
+                                        val file = audioRecorder.stopRecording()
+                                        isRecording = false
+                                        // Delete old audio file if it exists before setting new path
+                                        if (audioPath != null && audioPath != file?.absolutePath) {
+                                            audioRecorder.deleteAudioFile(audioPath)
+                                        }
+                                        audioPath = file?.absolutePath
+                                        recordingDuration = 0L
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                                    )
+                                ) {
+                                    Icon(imageVector = Icons.Default.Stop, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.stop_recording))
+                                }
+
+                                // Cancel button
+                                OutlinedButton(
+                                    onClick = {
+                                        audioRecorder.cancelRecording()
+                                        isRecording = false
+                                        recordingDuration = 0L
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(stringResource(R.string.cancel))
+                                }
+                            }
+                        }
+                    } else {
+                        // Show record button
+                        Button(
+                            onClick = {
+                                audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                            )
+                        ) {
+                            Icon(imageVector = Icons.Default.Mic, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.record_audio), fontSize = 18.sp)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Large Next Button
             Button(
                 onClick = {
                     if (medicationName.isNotEmpty()) {
-                        onNext(medicationName, selectedImageUri?.toString())
+                        // Stop any playback before proceeding
+                        audioPlayer.stop()
+                        onNext(medicationName, selectedImageUri?.toString(), audioPath)
                     }
                 },
                 modifier = Modifier

@@ -87,6 +87,7 @@ fun DebugDataScreen(
                                             appendLine("      \"id\": ${med.id},")
                                             appendLine("      \"name\": \"${med.name}\",")
                                             appendLine("      \"photoUri\": \"${med.photoUri}\",")
+                                            appendLine("      \"audioNotePath\": \"${med.audioNotePath}\",")
                                             appendLine("      \"reminderTimesJson\": ${med.reminderTimesJson ?: "null"}")
                                             append("    }")
                                             if (index < medications.size - 1) appendLine(",")
@@ -268,6 +269,17 @@ fun MedicationDebugCard(med: Medication) {
             DataRow("ID", med.id.toString())
             DataRow("Name", med.name)
             DataRow("Photo URI", med.photoUri ?: "null")
+            DataRow("Audio Path", med.audioNotePath ?: "null")
+            // Check if audio file exists
+            if (med.audioNotePath != null) {
+                val audioFile = File(med.audioNotePath)
+                val fileInfo = if (audioFile.exists()) {
+                    "EXISTS (${audioFile.length()} bytes)"
+                } else {
+                    "MISSING"
+                }
+                DataRow("Audio File", fileInfo)
+            }
             DataRow("Reminder Times", med.reminderTimesJson ?: "null")
             DataRow("Created At", Date(med.createdAt).toString())
         }

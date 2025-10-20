@@ -35,6 +35,21 @@
     <string name="delete">Delete</string>
     <string name="edit_medication">Edit Medication</string>
 
+    <!-- Audio Notes -->
+    <string name="audio_note">Audio Note</string>
+    <string name="add_audio_note">Add Audio Note</string>
+    <string name="record_audio">Record Audio</string>
+    <string name="recording">Recording…</string>
+    <string name="stop_recording">Stop Recording</string>
+    <string name="play_audio">Play Audio</string>
+    <string name="stop_playback">Stop Playback</string>
+    <string name="delete_audio">Delete Audio Note</string>
+    <string name="audio_instructions">Record instructions (max 60 seconds)</string>
+    <string name="audio_note_hint">e.g., Take before breakfast</string>
+    <string name="recording_time">Recording: %s</string>
+    <string name="audio_duration">Duration: %s</string>
+    <string name="has_audio_note">Has audio instructions</string>
+
     <!-- Medication Times -->
     <string name="set_reminder_times">When to Take</string>
     <string name="when_remind">When do you take this?</string>

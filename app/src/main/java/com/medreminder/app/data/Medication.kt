@@ -9,6 +9,7 @@ data class Medication(
     val id: Long = 0,
     val name: String,
     val photoUri: String? = null,
+    val audioNotePath: String? = null, // Path to audio instruction file
     val dosage: String? = null,
     val notes: String? = null,
     val reminderTimesJson: String? = null, // JSON string of List<ReminderTime>

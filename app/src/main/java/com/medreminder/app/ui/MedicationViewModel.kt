@@ -22,6 +22,10 @@ class MedicationViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    suspend fun insertMedicationReturnId(medication: Medication): Long {
+        return medicationDao.insertMedication(medication)
+    }
+
     fun deleteMedication(medication: Medication) {
         viewModelScope.launch {
             // Cancel notifications for this medication
@@ -67,6 +71,12 @@ class MedicationViewModel(application: Application) : AndroidViewModel(applicati
             }
 
             medicationDao.updateMedication(medication)
+        }
+    }
+
+    fun deleteMedicationById(id: Long) {
+        viewModelScope.launch {
+            medicationDao.deleteMedicationById(id)
         }
     }
 }

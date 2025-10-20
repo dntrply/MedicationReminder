@@ -28,6 +28,10 @@ This app provides medication reminders with visual aids (photos of actual medica
 - Quick Select buttons on the "When to Take" screen reflect these presets
 - The older per-screen "Customize" dialog has been removed to keep preferences in one place
 
+### Medication Cards
+- Clear state when unscheduled: shows "No schedule set"
+- Compact audio control: small play/stop icon in a slim column; name and schedules align consistently
+
 ## Tech Stack
 
 - **Language**: Kotlin

@@ -96,6 +96,7 @@
     <string name="notification_sound">નોટિફિકેશન ધ્વનિ</string>
     <string name="snooze_duration">સ્નૂઝ અવધિ</string>
     <string name="about">વિશે</string>
+    <string name="no_schedule">કોઈ સમય નક્કી નથી</string>
 
     <!-- Confirmations -->
     <string name="delete_medication_title">દવા કાઢી નાખો?</string>

@@ -111,6 +111,7 @@
     <string name="notification_sound">सूचना ध्वनि</string>
     <string name="snooze_duration">स्नूज़ अवधि</string>
     <string name="about">के बारे में</string>
+    <string name="no_schedule">कोई समय निर्धारित नहीं</string>
 
     <!-- Confirmations -->
     <string name="delete_medication_title">दवा हटाएं?</string>

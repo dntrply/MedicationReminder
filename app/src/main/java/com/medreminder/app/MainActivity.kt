@@ -63,6 +63,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import com.medreminder.app.data.SettingsStore
 import com.medreminder.app.data.userPrefs
 import kotlin.system.exitProcess
@@ -114,6 +115,10 @@ class MainActivity : ComponentActivity() {
                 var medicationToSave by remember {
                     mutableStateOf<Medication?>(null)
                 }
+                // Draft medication state for add flow (Option B extended)
+                var draftMedicationId by remember { mutableStateOf<Long?>(null) }
+                var draftMedication by remember { mutableStateOf<Medication?>(null) }
+                var draftHasTimes by remember { mutableStateOf(false) }
 
                 // Data class for temporary medication data during add/edit flow
                 data class TempMedicationData(
@@ -157,6 +162,10 @@ class MainActivity : ComponentActivity() {
                         onAddMedication = {
                             medicationToEdit = null
                             tempMedication = null
+                            // Reset draft state at the start of a new add flow
+                            draftMedicationId = null
+                            draftMedication = null
+                            draftHasTimes = false
                             currentScreen = "add_medication"
                         },
                         onEditMedication = { medication ->
@@ -184,12 +193,88 @@ class MainActivity : ComponentActivity() {
                         initialPhotoUri = tempMedication?.photoUri,
                         initialAudioPath = tempMedication?.audioPath,
                         onBack = {
+                            // Determine if any saved details exist using draft (more reliable than temp state)
+                            val hasDetails = draftMedication?.let { d ->
+                                d.name.isNotBlank() || d.photoUri != null || d.audioNotePath != null
+                            } ?: false
                             tempMedication = null
+                            // If a draft exists with no times and no details, clean it up
+                            if (draftMedicationId != null && !draftHasTimes && !hasDetails) {
+                                draftMedication?.let { draft ->
+                                    viewModel.deleteMedication(draft)
+                                }
+                                draftMedicationId = null
+                                draftMedication = null
+                            }
                             currentScreen = "home"
                         },
                         onNext = { name, photoUri, audioPath ->
                             tempMedication = TempMedicationData(name, photoUri, audioPath)
+                            // Ensure draft exists/updates immediately when moving to time selection
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                if (draftMedicationId == null) {
+                                    val draft = Medication(
+                                        name = name,
+                                        photoUri = photoUri,
+                                        audioNotePath = audioPath,
+                                        reminderTimesJson = null
+                                    )
+                                    val newId = viewModel.insertMedicationReturnId(draft)
+                                    withContext(Dispatchers.Main) {
+                                        draftMedicationId = newId
+                                        draftMedication = draft.copy(id = newId)
+                                    }
+                                } else {
+                                    val updated = (draftMedication ?: Medication(
+                                        id = draftMedicationId!!,
+                                        name = name,
+                                        photoUri = photoUri,
+                                        audioNotePath = audioPath
+                                    )).copy(
+                                        name = name,
+                                        photoUri = photoUri,
+                                        audioNotePath = audioPath
+                                    )
+                                    viewModel.updateMedication(updated)
+                                    withContext(Dispatchers.Main) {
+                                        draftMedication = updated
+                                    }
+                                }
+                            }
                             currentScreen = "set_reminder"
+                        },
+                        onAutosaveDetails = { name, photoUri, audioPath ->
+                            // Create or update draft medication record
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                if (draftMedicationId == null) {
+                                    val draft = Medication(
+                                        name = name,
+                                        photoUri = photoUri,
+                                        audioNotePath = audioPath,
+                                        reminderTimesJson = null
+                                    )
+                                    val newId = viewModel.insertMedicationReturnId(draft)
+                                    withContext(Dispatchers.Main) {
+                                        draftMedicationId = newId
+                                        draftMedication = draft.copy(id = newId)
+                                    }
+                                } else {
+                                    val updated = (draftMedication ?: Medication(
+                                        id = draftMedicationId!!,
+                                        name = name,
+                                        photoUri = photoUri,
+                                        audioNotePath = audioPath
+                                    )).copy(
+                                        name = name,
+                                        photoUri = photoUri,
+                                        audioNotePath = audioPath
+                                    )
+                                    viewModel.updateMedication(updated)
+                                    withContext(Dispatchers.Main) {
+                                        draftMedication = updated
+                                    }
+                                }
+                            }
                         }
                     )
                     "edit_medication" -> medicationToEdit?.let { medication ->
@@ -215,23 +300,66 @@ class MainActivity : ComponentActivity() {
                             medicationName = tempData.name,
                             medicationPhotoUri = tempData.photoUri,
                             onBack = {
-                                // Save and navigate home when back is pressed
+                                // Navigate home; clean up only if no times and truly no saved details
+                                val hasDetails = draftMedication?.let { d ->
+                                    d.name.isNotBlank() || d.photoUri != null || d.audioNotePath != null
+                                } ?: false
                                 tempMedication = null
+                                if (draftMedicationId != null && !draftHasTimes && !hasDetails) {
+                                    draftMedication?.let { draft ->
+                                        viewModel.deleteMedication(draft)
+                                    }
+                                    draftMedicationId = null
+                                    draftMedication = null
+                                }
                                 currentScreen = "home"
                             },
                             onSave = { reminderTimes ->
-                                // Auto-save: just update the medication, don't navigate
+                                // Upsert times into the draft medication and schedule notifications
                                 val reminderJson = reminderTimes.joinToString(",") { rt ->
                                     """{"hour":${rt.hour},"minute":${rt.minute},"days":[${rt.daysOfWeek.joinToString(",")}]}"""
                                 }
                                 val jsonArray = "[$reminderJson]"
 
-                                medicationToSave = Medication(
-                                    name = tempData.name,
-                                    photoUri = tempData.photoUri,
-                                    audioNotePath = tempData.audioPath,
-                                    reminderTimesJson = jsonArray
-                                )
+                                lifecycleScope.launch(Dispatchers.IO) {
+                                    if (draftMedicationId == null) {
+                                        // Edge case: if no draft yet, create one now then proceed
+                                        val draft = Medication(
+                                            name = tempData.name,
+                                            photoUri = tempData.photoUri,
+                                            audioNotePath = tempData.audioPath,
+                                            reminderTimesJson = jsonArray
+                                        )
+                                        val newId = viewModel.insertMedicationReturnId(draft)
+                                        val created = draft.copy(id = newId)
+                                        withContext(Dispatchers.Main) {
+                                            draftMedicationId = newId
+                                            draftMedication = created
+                                            draftHasTimes = true
+                                        }
+                                        NotificationScheduler.scheduleMedicationNotifications(this@MainActivity, created)
+                                    } else {
+                                        val updated = (draftMedication ?: Medication(
+                                            id = draftMedicationId!!,
+                                            name = tempData.name,
+                                            photoUri = tempData.photoUri,
+                                            audioNotePath = tempData.audioPath
+                                        )).copy(
+                                            name = tempData.name,
+                                            photoUri = tempData.photoUri,
+                                            audioNotePath = tempData.audioPath,
+                                            reminderTimesJson = jsonArray
+                                        )
+                                        viewModel.updateMedication(updated)
+                                        // Re-schedule notifications for updates
+                                        NotificationScheduler.cancelMedicationNotifications(this@MainActivity, updated)
+                                        NotificationScheduler.scheduleMedicationNotifications(this@MainActivity, updated)
+                                        withContext(Dispatchers.Main) {
+                                            draftMedication = updated
+                                            draftHasTimes = true
+                                        }
+                                    }
+                                }
                             }
                         )
                     }
@@ -884,6 +1012,18 @@ fun MedicationCard(
     onDelete: () -> Unit
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val audioPlayer = remember { com.medreminder.app.utils.AudioPlayer(context) }
+    var isPlaying by remember { mutableStateOf(false) }
+
+    DisposableEffect(medication.audioNotePath) {
+        onDispose {
+            // Ensure we stop playback when card leaves composition
+            if (isPlaying) audioPlayer.stop()
+            audioPlayer.release()
+            isPlaying = false
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -927,23 +1067,58 @@ fun MedicationCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            // Medication info
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = medication.name,
-                    fontSize = 24.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color.Black,
-                    maxLines = 2
-                )
+            // Middle section: optional slim audio column + name/schedule column
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                // Always reserve a slim column for audio to keep name alignment consistent
+                Column(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (medication.audioNotePath != null) {
+                        IconButton(
+                            onClick = {
+                                if (isPlaying) {
+                                    audioPlayer.stop()
+                                    isPlaying = false
+                                } else {
+                                    audioPlayer.play(
+                                        medication.audioNotePath,
+                                        onCompletion = { isPlaying = false },
+                                        onError = { isPlaying = false }
+                                    )
+                                    isPlaying = true
+                                }
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Stop audio" else "Play audio",
+                                tint = androidx.compose.ui.graphics.Color(0xFF4A90E2),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(6.dp))
 
-                // Show reminder times
-                medication.reminderTimesJson?.let { jsonString ->
-                    if (jsonString.isNotEmpty() && jsonString != "[]") {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = medication.name,
+                        fontSize = 24.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = androidx.compose.ui.graphics.Color.Black,
+                        maxLines = 2
+                    )
+
+                    val jsonString = medication.reminderTimesJson
+                    val hasTimes = !jsonString.isNullOrBlank() && jsonString.trim() != "[]" && jsonString!!.contains("\"hour\":")
+                    if (hasTimes) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -956,10 +1131,29 @@ fun MedicationCard(
                                 tint = androidx.compose.ui.graphics.Color(0xFF4A90E2)
                             )
                             Text(
-                                text = parseReminderTimesForDisplay(jsonString),
+                                text = parseReminderTimesForDisplay(jsonString!!),
                                 fontSize = 14.sp,
                                 color = androidx.compose.ui.graphics.Color(0xFF4A90E2),
                                 maxLines = 2
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = androidx.compose.ui.graphics.Color.Gray
+                            )
+                            Text(
+                                text = stringResource(R.string.no_schedule),
+                                fontSize = 14.sp,
+                                color = androidx.compose.ui.graphics.Color.Gray
                             )
                         }
                     }
@@ -1848,7 +2042,8 @@ fun AddMedicationScreen(
     initialPhotoUri: String? = null,
     initialAudioPath: String? = null,
     onBack: () -> Unit,
-    onNext: (String, String?, String?) -> Unit // name, photoUri, audioPath
+    onNext: (String, String?, String?) -> Unit, // name, photoUri, audioPath
+    onAutosaveDetails: (String, String?, String?) -> Unit = { _, _, _ -> }
 ) {
     var medicationName by remember { mutableStateOf(initialName) }
     var showPhotoOptions by remember { mutableStateOf(false) }
@@ -1895,6 +2090,16 @@ fun AddMedicationScreen(
                 audioRecorder.cancelRecording()
             }
             audioPlayer.release()
+        }
+    }
+
+    // Autosave debounce for name/photo/audio changes
+    LaunchedEffect(medicationName, selectedImageUri, audioPath) {
+        // Only autosave when user has provided at least one meaningful field
+        val hasData = medicationName.isNotBlank() || selectedImageUri != null || audioPath != null
+        if (hasData) {
+            kotlinx.coroutines.delay(350)
+            onAutosaveDetails(medicationName, selectedImageUri?.toString(), audioPath)
         }
     }
 

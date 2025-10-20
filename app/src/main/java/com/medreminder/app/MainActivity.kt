@@ -1164,9 +1164,9 @@ fun TimelineView(
         }
     }
 
-    // Find the upcoming medication hour (prioritizing outstanding medications)
-    // Recalculate whenever timeSlots or todayHistory changes
-    val upcomingHour = remember(timeSlots, todayHistory) {
+    // Find the upcoming medication hour (prioritizing actual pending notifications)
+    // Recalculate when timeSlots, todayHistory, or pendingMeds change
+    val upcomingHour = remember(timeSlots, todayHistory, pendingMeds) {
         val currentCalendar = java.util.Calendar.getInstance()
         val currentHour = currentCalendar.get(java.util.Calendar.HOUR_OF_DAY)
         val currentMinute = currentCalendar.get(java.util.Calendar.MINUTE)
@@ -1188,13 +1188,14 @@ fun TimelineView(
         Log.d("Timeline", "Taken times today: $takenTimes")
         Log.d("Timeline", "History count: ${todayHistory.size}")
 
-        // Find outstanding medications (scheduled but not taken, and time has passed)
-        val outstandingSlots = timeSlots
-            .filter { slot ->
-                val slotTimeInMinutes = slot.hour * 60 + slot.minute
-                slotTimeInMinutes < currentTimeInMinutes && // Time has passed
-                !takenTimes.contains("${slot.hour}:${slot.minute}") // Not taken
+        // Outstanding = those with an active pending notification (i.e., notification was sent)
+        val outstandingSlots = timeSlots.filter { slot ->
+            pendingMeds.any {
+                it.medicationId == slot.medication.id &&
+                it.hour == slot.hour &&
+                it.minute == slot.minute
             }
+        }
 
         Log.d("Timeline", "Outstanding slots: ${outstandingSlots.size}")
         outstandingSlots.forEach { slot ->

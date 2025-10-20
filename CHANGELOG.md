@@ -20,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Outstanding medication indicators on timeline (red border for pending, green checkmark for taken)
 - Auto-cleanup of stale pending medication data
 - Developer Debug Data viewer with export to JSON functionality
+- Settings screen to manage Language and Preset Times in one place
+
+### Changed
+- Language changes are performed from Settings and are auto-saved and applied immediately
+- Preset time changes are auto-saved from Settings and used across the app
+
+### Removed
+- "Change Language" menu item from Home (now under Settings)
+- "Customize" button/dialog on the "When to Take" screen (preset times are edited in Settings)
 
 ### Fixed
 - Data inconsistency between notifications and home screen after app restart

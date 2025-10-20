@@ -60,7 +60,6 @@ fun SetReminderTimesScreen(
     var isInitialLoad by remember { mutableStateOf(true) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showDayPicker by remember { mutableStateOf<Int?>(null) } // Index of time being edited
-    var showCustomizeDialog by remember { mutableStateOf(false) }
     var selectedHour by remember { mutableStateOf(9) }
     var selectedMinute by remember { mutableStateOf(0) }
     var hourInputText by remember { mutableStateOf("") }
@@ -207,24 +206,6 @@ fun SetReminderTimesScreen(
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     color = androidx.compose.ui.graphics.Color.Gray
                 )
-                TextButton(onClick = { showCustomizeDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = when (currentLanguage) {
-                            "hi" -> "बदलें"
-                            "gu" -> "બદલો"
-                            else -> "Customize"
-                        },
-                        fontSize = 16.sp,
-                        color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                    )
-                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -747,151 +728,10 @@ fun SetReminderTimesScreen(
             )
         }
 
-        // Customize preset times dialog
-        if (showCustomizeDialog) {
-            CustomizePresetTimesDialog(
-                currentLanguage = currentLanguage,
-                currentPresets = presetTimes,
-                onDismiss = { showCustomizeDialog = false },
-                onSave = { newPresets ->
-                    PresetTimesManager.savePresetTimes(context, newPresets)
-                    presetTimes = newPresets
-                    showCustomizeDialog = false
-                }
-            )
-        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CustomizePresetTimesDialog(
-    currentLanguage: String,
-    currentPresets: PresetTimes,
-    onDismiss: () -> Unit,
-    onSave: (PresetTimes) -> Unit
-) {
-    var morningHour by remember { mutableStateOf(currentPresets.morningHour) }
-    var morningMinute by remember { mutableStateOf(currentPresets.morningMinute) }
-    var lunchHour by remember { mutableStateOf(currentPresets.lunchHour) }
-    var lunchMinute by remember { mutableStateOf(currentPresets.lunchMinute) }
-    var eveningHour by remember { mutableStateOf(currentPresets.eveningHour) }
-    var eveningMinute by remember { mutableStateOf(currentPresets.eveningMinute) }
-    var bedtimeHour by remember { mutableStateOf(currentPresets.bedtimeHour) }
-    var bedtimeMinute by remember { mutableStateOf(currentPresets.bedtimeMinute) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        },
-        title = {
-            Text(
-                text = when (currentLanguage) {
-                    "hi" -> "समय सेटिंग्स बदलें"
-                    "gu" -> "સમય સેટિંગ્સ બદલો"
-                    else -> "Customize Times"
-                },
-                fontSize = 24.sp
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Morning
-                TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "सुबह"
-                        "gu" -> "સવાર"
-                        else -> "Morning"
-                    },
-                    hour = morningHour,
-                    minute = morningMinute,
-                    onHourChange = { morningHour = it },
-                    onMinuteChange = { morningMinute = it }
-                )
-
-                // Lunch
-                TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "दोपहर"
-                        "gu" -> "બપોર"
-                        else -> "Lunch"
-                    },
-                    hour = lunchHour,
-                    minute = lunchMinute,
-                    onHourChange = { lunchHour = it },
-                    onMinuteChange = { lunchMinute = it }
-                )
-
-                // Evening
-                TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "शाम"
-                        "gu" -> "સાંજ"
-                        else -> "Evening"
-                    },
-                    hour = eveningHour,
-                    minute = eveningMinute,
-                    onHourChange = { eveningHour = it },
-                    onMinuteChange = { eveningMinute = it }
-                )
-
-                // Bedtime
-                TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "रात"
-                        "gu" -> "રાત્રે"
-                        else -> "Bedtime"
-                    },
-                    hour = bedtimeHour,
-                    minute = bedtimeMinute,
-                    onHourChange = { bedtimeHour = it },
-                    onMinuteChange = { bedtimeMinute = it }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSave(
-                        PresetTimes(
-                            morningHour, morningMinute,
-                            lunchHour, lunchMinute,
-                            eveningHour, eveningMinute,
-                            bedtimeHour, bedtimeMinute
-                        )
-                    )
-                },
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                Text(
-                    when (currentLanguage) {
-                        "hi" -> "सहेजें"
-                        "gu" -> "સાચવો"
-                        else -> "Save"
-                    },
-                    fontSize = 20.sp
-                )
-            }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth().height(56.dp)
-            ) {
-                Text(stringResource(R.string.cancel), fontSize = 18.sp)
-            }
-        }
-    )
-}
+ 
 
 @Composable
 fun TimePresetRow(

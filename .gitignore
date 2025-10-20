@@ -45,6 +45,7 @@ captures/
 .idea/caches
 .idea/modules.xml
 .idea/navEditor.xml
+.idea/deploymentTargetSelector.xml
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
@@ -97,3 +98,4 @@ debug_db.sh
 medication_database.db
 *.db
 debug_export_*.json
+*.m4a

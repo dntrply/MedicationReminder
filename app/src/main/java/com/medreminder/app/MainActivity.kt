@@ -55,6 +55,7 @@ import com.medreminder.app.notifications.NotificationScheduler
 import com.medreminder.app.notifications.PendingMedicationTracker
 import com.medreminder.app.ui.MedicationViewModel
 import com.medreminder.app.ui.SetReminderTimesScreen
+import com.medreminder.app.ui.SettingsScreen
 import com.medreminder.app.ui.theme.MedicationReminderTheme
 import java.io.File
 import java.text.SimpleDateFormat
@@ -168,6 +169,9 @@ class MainActivity : ComponentActivity() {
                         },
                         onOutstandingMedications = {
                             currentScreen = "outstanding_medications"
+                        },
+                        onOpenSettings = {
+                            currentScreen = "settings"
                         }
                     )
                     "add_medication" -> AddMedicationScreen(
@@ -291,6 +295,17 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+                    "settings" -> {
+                        SettingsScreen(
+                            currentLanguage = currentLanguage,
+                            onBack = { currentScreen = "home" },
+                            onLanguageChange = { newLang ->
+                                currentLanguage = newLang
+                                saveLanguagePreference(this@MainActivity, newLang)
+                                recreate()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -344,10 +359,10 @@ fun HomeScreen(
     onAddMedication: () -> Unit = {},
     onEditMedication: (Medication) -> Unit = {},
     onDebugData: () -> Unit = {},
-    onOutstandingMedications: () -> Unit = {}
+    onOutstandingMedications: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
 ) {
     val medications by viewModel.medications.collectAsState(initial = emptyList())
-    var showLanguageDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showTimelineView by remember { mutableStateOf(false) }
@@ -356,7 +371,7 @@ fun HomeScreen(
 
     // Handle back button press - show exit confirmation
     // Only enable when dialogs are not open to avoid conflicts
-    BackHandler(enabled = !showLanguageDialog && !showMenu) {
+    BackHandler(enabled = !showMenu) {
         showExitDialog = true
     }
 
@@ -393,6 +408,22 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
+                                    Icon(Icons.Default.Settings, contentDescription = null)
+                                    Text(stringResource(R.string.settings), fontSize = 18.sp)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onOpenSettings()
+                            }
+                        )
+                        Divider()
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
                                     Icon(Icons.Default.CalendarMonth, contentDescription = null)
                                     Text(stringResource(R.string.feature_schedule), fontSize = 18.sp)
                                 }
@@ -418,29 +449,7 @@ fun HomeScreen(
                             }
                         )
                         Divider()
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(Icons.Default.Language, contentDescription = null)
-                                    Text(
-                                        when (currentLanguage) {
-                                            "hi" -> "भाषा बदलें"
-                                            "gu" -> "ભાષા બદલો"
-                                            else -> "Change Language"
-                                        },
-                                        fontSize = 18.sp
-                                    )
-                                }
-                            },
-                            onClick = {
-                                showMenu = false
-                                showLanguageDialog = true
-                            }
-                        )
-                        Divider()
+                        
                         DropdownMenuItem(
                             text = {
                                 Row(
@@ -758,135 +767,7 @@ fun HomeScreen(
             }
         }
 
-        // Language selection dialog
-        if (showLanguageDialog) {
-            AlertDialog(
-                onDismissRequest = { showLanguageDialog = false },
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text("Select Language / ભાષા પસંદ કરો / भाषा चुनें")
-                    }
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // English option
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(70.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (currentLanguage == "en")
-                                    androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                                else
-                                    androidx.compose.ui.graphics.Color(0xFFF5F5F5)
-                            ),
-                            onClick = {
-                                onLanguageChange("en")
-                                showLanguageDialog = false
-                            }
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "English",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontSize = 20.sp,
-                                    color = if (currentLanguage == "en")
-                                        androidx.compose.ui.graphics.Color.White
-                                    else
-                                        androidx.compose.ui.graphics.Color.Black
-                                )
-                            }
-                        }
-
-                        // Hindi option
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(70.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (currentLanguage == "hi")
-                                    androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                                else
-                                    androidx.compose.ui.graphics.Color(0xFFF5F5F5)
-                            ),
-                            onClick = {
-                                onLanguageChange("hi")
-                                showLanguageDialog = false
-                            }
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "हिन्दी",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontSize = 20.sp,
-                                    color = if (currentLanguage == "hi")
-                                        androidx.compose.ui.graphics.Color.White
-                                    else
-                                        androidx.compose.ui.graphics.Color.Black
-                                )
-                            }
-                        }
-
-                        // Gujarati option
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(70.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (currentLanguage == "gu")
-                                    androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                                else
-                                    androidx.compose.ui.graphics.Color(0xFFF5F5F5)
-                            ),
-                            onClick = {
-                                onLanguageChange("gu")
-                                showLanguageDialog = false
-                            }
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "ગુજરાતી",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontSize = 20.sp,
-                                    color = if (currentLanguage == "gu")
-                                        androidx.compose.ui.graphics.Color.White
-                                    else
-                                        androidx.compose.ui.graphics.Color.Black
-                                )
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showLanguageDialog = false }) {
-                        Text("Close / बंद करें")
-                    }
-                }
-            )
-        }
+        // Language selection dialog removed; language changes live under Settings
 
         // Exit confirmation dialog
         if (showExitDialog) {

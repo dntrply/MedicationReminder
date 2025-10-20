@@ -21,6 +21,13 @@ This app provides medication reminders with visual aids (photos of actual medica
 - **Developer Tools** - Debug data viewer with export functionality
 - **Offline-First** - works without internet connection
 
+### Settings & Personalization
+- Central Settings screen for preferences
+  - Language selection (English, हिन्दी, ગુજરાતી) — applies immediately
+  - Preset meal times (Morning/Lunch/Evening/Bedtime) — auto-saved
+- Quick Select buttons on the "When to Take" screen reflect these presets
+- The older per-screen "Customize" dialog has been removed to keep preferences in one place
+
 ## Tech Stack
 
 - **Language**: Kotlin
@@ -74,6 +81,13 @@ docs/                          # Documentation
 
 ```bash
 ./gradlew build
+```
+
+### Install/Run on emulator quickly
+
+```bash
+./gradlew assembleDebug installDebug
+adb shell am start -n com.medreminder.app/.MainActivity
 ```
 
 ### Running Tests

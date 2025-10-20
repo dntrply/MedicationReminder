@@ -19,7 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,7 +47,8 @@ fun SetReminderTimesScreen(
     onEditDetails: (() -> Unit)? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var presetTimes by remember { mutableStateOf(PresetTimesManager.getPresetTimes(context)) }
+    val presetTimes by PresetTimesManager.getPresetTimesFlow(context)
+        .collectAsState(initial = PresetTimes())
 
     // Parse initial reminder times if provided (for editing)
     val parsedInitialTimes = remember(initialReminderTimes) {
@@ -70,6 +74,22 @@ fun SetReminderTimesScreen(
     var timeErrorMessage by remember { mutableStateOf("") }
     val hourFocusRequester = remember { FocusRequester() }
     val minuteFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var requestMinuteFocus by remember { mutableStateOf(false) }
+    var requestHourFocus by remember { mutableStateOf(false) }
+
+    LaunchedEffect(requestMinuteFocus) {
+        if (requestMinuteFocus) {
+            minuteFocusRequester.requestFocus()
+            requestMinuteFocus = false
+        }
+    }
+    LaunchedEffect(requestHourFocus) {
+        if (requestHourFocus) {
+            hourFocusRequester.requestFocus()
+            requestHourFocus = false
+        }
+    }
 
     // Helper function to sort reminder times chronologically
     fun sortReminderTimes(times: List<ReminderTime>): List<ReminderTime> {
@@ -431,8 +451,8 @@ fun SetReminderTimesScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (isHourFocused) {
-                                        LaunchedEffect(Unit) {
-                                            hourFocusRequester.requestFocus()
+                                        LaunchedEffect(isHourFocused) {
+                                            if (isHourFocused) hourFocusRequester.requestFocus()
                                         }
                                         androidx.compose.foundation.text.BasicTextField(
                                             value = hourInputText,
@@ -455,6 +475,24 @@ fun SetReminderTimesScreen(
                                             modifier = Modifier
                                                 .width(90.dp)
                                                 .focusRequester(hourFocusRequester)
+                                                .onPreviewKeyEvent { keyEvent ->
+                                                    val native = keyEvent.nativeKeyEvent
+                                                    if (native.keyCode == AndroidKeyEvent.KEYCODE_TAB && native.action == AndroidKeyEvent.ACTION_DOWN) {
+                                                        // Commit hour input if valid, then move focus to minutes
+                                                        if (hourInputText.isNotEmpty()) {
+                                                            hourInputText.toIntOrNull()?.let { value ->
+                                                                if (value in 0..23) selectedHour = value
+                                                            }
+                                                        }
+                                                        isHourFocused = false
+                                                        isMinuteFocused = true
+                                                        minuteInputText = ""
+                                                        requestMinuteFocus = true
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
+                                                }
                                         )
                                     } else {
                                         Text(
@@ -500,8 +538,8 @@ fun SetReminderTimesScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (isMinuteFocused) {
-                                        LaunchedEffect(Unit) {
-                                            minuteFocusRequester.requestFocus()
+                                        LaunchedEffect(isMinuteFocused) {
+                                            if (isMinuteFocused) minuteFocusRequester.requestFocus()
                                         }
                                         androidx.compose.foundation.text.BasicTextField(
                                             value = minuteInputText,
@@ -524,6 +562,24 @@ fun SetReminderTimesScreen(
                                             modifier = Modifier
                                                 .width(90.dp)
                                                 .focusRequester(minuteFocusRequester)
+                                                .onPreviewKeyEvent { keyEvent ->
+                                                    val native = keyEvent.nativeKeyEvent
+                                                    if (native.keyCode == AndroidKeyEvent.KEYCODE_TAB && native.action == AndroidKeyEvent.ACTION_DOWN && native.isShiftPressed) {
+                                                        // Commit minute input if valid, then Shift+Tab back to hours
+                                                        if (minuteInputText.isNotEmpty()) {
+                                                            minuteInputText.toIntOrNull()?.let { value ->
+                                                                if (value in 0..59) selectedMinute = value
+                                                            }
+                                                        }
+                                                        isMinuteFocused = false
+                                                        isHourFocused = true
+                                                        hourInputText = ""
+                                                        requestHourFocus = true
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
+                                                }
                                         )
                                     } else {
                                         Text(

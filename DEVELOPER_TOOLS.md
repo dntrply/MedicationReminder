@@ -12,13 +12,13 @@ The app stores data in three places:
    - Location: `/data/data/com.medreminder.app/databases/medication_database`
    - Tables: `medications`, `medication_history`
    
-2. **Pending Medications** (SharedPreferences)
-   - Location: `/data/data/com.medreminder.app/shared_prefs/pending_medications.xml`
-   - Stores: Active notification state
+2. **Pending Medications** (DataStore - Preferences)
+   - Location: `/data/data/com.medreminder.app/datastore/user_prefs.preferences_pb`
+   - Stores: Active notification state (JSON string in key `pending_list`)
    
-3. **App Preferences** (SharedPreferences)
-   - Location: `/data/data/com.medreminder.app/shared_prefs/app_prefs.xml`
-   - Stores: User settings (language, etc.)
+3. **App Preferences** (DataStore - Preferences)
+   - Location: `/data/data/com.medreminder.app/datastore/user_prefs.preferences_pb`
+   - Stores: User settings (language, preset times)
 
 ---
 
@@ -60,20 +60,18 @@ The app stores data in three places:
 
 **Best for:** Quick verification, CI/CD, scripts
 
-### View SharedPreferences
+### View DataStore (Preferences)
 
 ```bash
-# Pending medications
-adb shell "run-as com.medreminder.app cat shared_prefs/pending_medications.xml"
-
-# App settings
-adb shell "run-as com.medreminder.app cat shared_prefs/app_prefs.xml"
+# Raw protobuf (binary)
+adb shell "run-as com.medreminder.app cat datastore/user_prefs.preferences_pb" > user_prefs.preferences_pb
 ```
 
-### List Database Files
+### List Database Files and DataStore directory
 
 ```bash
 adb shell "run-as com.medreminder.app ls -lh databases/"
+adb shell "run-as com.medreminder.app ls -lh datastore/"
 ```
 
 ### Use the Helper Script
@@ -84,7 +82,7 @@ adb shell "run-as com.medreminder.app ls -lh databases/"
 
 This script shows:
 - Pending medications (SharedPreferences)
-- App preferences
+- App preferences (DataStore)
 - Database file sizes
 - Instructions to pull database
 
@@ -177,4 +175,3 @@ For production:
 - Remove debug screens/menus
 - Add proper analytics/crash reporting
 - Consider admin-only export features with authentication
-

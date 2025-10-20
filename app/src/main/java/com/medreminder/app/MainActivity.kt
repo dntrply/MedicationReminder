@@ -61,6 +61,10 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
+import com.medreminder.app.data.SettingsStore
+import com.medreminder.app.data.userPrefs
 import kotlin.system.exitProcess
 
 /**
@@ -317,22 +321,16 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Language preference helpers
+// Language preference helpers (DataStore)
 private fun saveLanguagePreference(context: Context, lang: String) {
-    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        .edit()
-        .putString("language", lang)
-        .apply()
+    runBlocking { SettingsStore.setLanguage(context, lang) }
 }
 
 private fun getLanguagePreference(context: Context): String {
-    return context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        .getString("language", "en") ?: "en"
+    return runBlocking { SettingsStore.languageFlow(context).first() }
 }
 
-private fun getCurrentLanguage(context: Context): String {
-    return getLanguagePreference(context)
-}
+private fun getCurrentLanguage(context: Context): String = getLanguagePreference(context)
 
 private fun updateContextLocale(context: Context, language: String): Context {
     val locale = Locale(language)
@@ -1133,6 +1131,10 @@ fun TimelineView(
         MedicationDatabase.getDatabase(context).historyDao()
     }
 
+    // Observe pending medications reactively from DataStore
+    val pendingMeds by PendingMedicationTracker.pendingMedicationsFlow(context)
+        .collectAsState(initial = emptyList())
+
     // Calculate start and end of day
     val (startOfDay, endOfDay) = remember {
         val calendar = java.util.Calendar.getInstance()
@@ -1162,9 +1164,9 @@ fun TimelineView(
         }
     }
 
-    // Find the upcoming medication hour (prioritizing outstanding medications)
-    // Recalculate whenever timeSlots or todayHistory changes
-    val upcomingHour = remember(timeSlots, todayHistory) {
+    // Find the upcoming medication hour (prioritizing actual pending notifications)
+    // Recalculate when timeSlots, todayHistory, or pendingMeds change
+    val upcomingHour = remember(timeSlots, todayHistory, pendingMeds) {
         val currentCalendar = java.util.Calendar.getInstance()
         val currentHour = currentCalendar.get(java.util.Calendar.HOUR_OF_DAY)
         val currentMinute = currentCalendar.get(java.util.Calendar.MINUTE)
@@ -1186,13 +1188,14 @@ fun TimelineView(
         Log.d("Timeline", "Taken times today: $takenTimes")
         Log.d("Timeline", "History count: ${todayHistory.size}")
 
-        // Find outstanding medications (scheduled but not taken, and time has passed)
-        val outstandingSlots = timeSlots
-            .filter { slot ->
-                val slotTimeInMinutes = slot.hour * 60 + slot.minute
-                slotTimeInMinutes < currentTimeInMinutes && // Time has passed
-                !takenTimes.contains("${slot.hour}:${slot.minute}") // Not taken
+        // Outstanding = those with an active pending notification (i.e., notification was sent)
+        val outstandingSlots = timeSlots.filter { slot ->
+            pendingMeds.any {
+                it.medicationId == slot.medication.id &&
+                it.hour == slot.hour &&
+                it.minute == slot.minute
             }
+        }
 
         Log.d("Timeline", "Outstanding slots: ${outstandingSlots.size}")
         outstandingSlots.forEach { slot ->
@@ -1402,8 +1405,11 @@ fun TimelineView(
                                             // 1. It's in the pending notification tracker (meaning a notification was actually sent)
                                             // OR
                                             // 2. It has history (meaning it was taken/skipped, so we know notification was sent)
-                                            val hasPendingNotification = PendingMedicationTracker.getPendingMedications(context)
-                                                .any { it.medicationId == slot.medication.id && it.hour == slot.hour && it.minute == slot.minute }
+                                            val hasPendingNotification = pendingMeds.any {
+                                                it.medicationId == slot.medication.id &&
+                                                it.hour == slot.hour &&
+                                                it.minute == slot.minute
+                                            }
 
                                             val hasHistoryForThisTime = todayHistory.any { history ->
                                                 val historyCal = java.util.Calendar.getInstance()

@@ -7,14 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-01-24
+
+Beta release with complete MVP features for medication management, history tracking, and overdue medication alerts.
+
 ### Added
 - Initial medication management features
 - Photo capture and gallery selection for medications
 - Multi-language support (English, Hindi, Gujarati)
 - Daily timeline view showing scheduled medications
 - Notification system with repeat reminders
-- Medication history tracking
-- **Outstanding Medications screen** - Dedicated full-screen view to manage all pending medications with large, elderly-friendly action buttons
+- **History Screen** - Complete medication history viewer with filtering by date or medication, includes missed dose tracking
+- **Overdue Medication Tracking** - Visual alert system for medications from previous days with dedicated collapsible section
+- **Missed Dose Calculator** - Automatically identifies scheduled doses that weren't taken
 - **Reaction palette on timeline** - Quick action popup when tapping medication icons in timeline view
 - **Hybrid approach for medication management** - Both dedicated screen (via menu) and quick actions (via timeline tap)
 - Outstanding medication indicators on timeline (red border for pending, green checkmark for taken)
@@ -23,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings screen to manage Language, Preset Times, Notification Repeat Interval, and Privacy settings in one place
 - Audio control on medication cards (play/stop recorded note)
 - **Custom app icon** - Professional medical-themed icon with red/green capsule pill and blue medical cross
+- Privacy settings for lock screen notification visibility control
+- Floating Action Button (FAB) for quick medication addition
 
 ### Changed
 - Language changes are performed from Settings and are auto-saved and applied immediately
@@ -32,11 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Medication card layout: reserved slim audio column (consistent name alignment), stacked name + schedules
 - Reduced spacing between photo and audio column for tighter layout
 - **Notification repeat interval slider** - Now updates value in real-time as you move the slider for immediate feedback
+- **Timeline view is now the default view** on home screen
+- Home screen with collapsible lower section to maximize overdue medication visibility
+- Section headers distinguish "Today's Schedule" from "Your Medications"
 
 ### Removed
 - "Change Language" menu item from Home (now under Settings)
 - "Customize" button/dialog on the "When to Take" screen (preset times are edited in Settings)
 - "Set Times" quick action on card (use Edit)
+- Outstanding Medications standalone screen (functionality integrated into home screen)
 
 ### Fixed
 - Data inconsistency between notifications and home screen after app restart
@@ -48,6 +59,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Add flow duplicates** - Prevented two rows from being created when adding multiple times; upserts into the same draft row
 - **Time dialog keyboard** - Tab/Shift+Tab moves between hour/minute and commits values; stabilized focus to avoid loops
 
+### Technical
+- Database version bumped to 3 with migration support
+- Added medication history queries for date range and adherence tracking
+- Enhanced notification privacy controls
+- Improved pending medication validation and synchronization
+
 ## [1.0.0] - TBD
 
-Initial release - MVP for medication reminder app focused on elderly users.
+Planned stable release after beta testing period.

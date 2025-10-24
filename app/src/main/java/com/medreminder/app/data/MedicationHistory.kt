@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Entity representing when a medication was taken
+ * Entity representing when a medication was taken, skipped, or missed
  */
 @Entity(tableName = "medication_history")
 data class MedicationHistory(
@@ -18,5 +18,6 @@ data class MedicationHistory(
     val takenTime: Long,      // When it was actually taken (timestamp)
 
     val wasOnTime: Boolean,   // Was it taken within acceptable window?
+    val action: String = "TAKEN",  // Action: "TAKEN", "SKIPPED", "MISSED"
     val notes: String? = null // Optional notes about this dose
 )

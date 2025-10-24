@@ -20,8 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Outstanding medication indicators on timeline (red border for pending, green checkmark for taken)
 - Auto-cleanup of stale pending medication data
 - Developer Debug Data viewer with export to JSON functionality
-- Settings screen to manage Language and Preset Times in one place
+- Settings screen to manage Language, Preset Times, Notification Repeat Interval, and Privacy settings in one place
 - Audio control on medication cards (play/stop recorded note)
+- **Custom app icon** - Professional medical-themed icon with red/green capsule pill and blue medical cross
 
 ### Changed
 - Language changes are performed from Settings and are auto-saved and applied immediately
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add flow uses a draft/upsert model; changes auto-save from first screen (name/photo/audio) through schedules
 - Medication card layout: reserved slim audio column (consistent name alignment), stacked name + schedules
 - Reduced spacing between photo and audio column for tighter layout
+- **Notification repeat interval slider** - Now updates value in real-time as you move the slider for immediate feedback
 
 ### Removed
 - "Change Language" menu item from Home (now under Settings)

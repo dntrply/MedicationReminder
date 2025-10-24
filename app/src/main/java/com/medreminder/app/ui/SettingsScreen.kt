@@ -1,11 +1,14 @@
 package com.medreminder.app.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -110,66 +113,173 @@ fun SettingsScreen(
 
             Divider(Modifier.padding(vertical = 8.dp))
 
-            // Preset times section
+            // Preset times section (collapsible, default collapsed)
+            var presetsExpanded by remember { mutableStateOf(false) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { presetsExpanded = !presetsExpanded },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = when (currentLanguage) {
+                        "hi" -> "समय प्रीसेट"
+                        "gu" -> "સમય પ્રીસેટ"
+                        else -> "Preset Times"
+                    },
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                )
+                Icon(
+                    imageVector = if (presetsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                )
+            }
+
+            if (presetsExpanded) {
+                // Reuse the existing TimePresetRow from SetReminderTimesScreen
+                TimePresetRow(
+                    label = when (currentLanguage) {
+                        "hi" -> "सुबह"
+                        "gu" -> "સવાર"
+                        else -> "Morning"
+                    },
+                    hour = presets.morningHour,
+                    minute = presets.morningMinute,
+                    onHourChange = { newHour -> updatePresets { p -> p.copy(morningHour = newHour) } },
+                    onMinuteChange = { newMinute -> updatePresets { p -> p.copy(morningMinute = newMinute) } }
+                )
+
+                TimePresetRow(
+                    label = when (currentLanguage) {
+                        "hi" -> "दोपहर"
+                        "gu" -> "બપોર"
+                        else -> "Lunch"
+                    },
+                    hour = presets.lunchHour,
+                    minute = presets.lunchMinute,
+                    onHourChange = { newHour -> updatePresets { p -> p.copy(lunchHour = newHour) } },
+                    onMinuteChange = { newMinute -> updatePresets { p -> p.copy(lunchMinute = newMinute) } }
+                )
+
+                TimePresetRow(
+                    label = when (currentLanguage) {
+                        "hi" -> "शाम"
+                        "gu" -> "સાંજ"
+                        else -> "Evening"
+                    },
+                    hour = presets.eveningHour,
+                    minute = presets.eveningMinute,
+                    onHourChange = { newHour -> updatePresets { p -> p.copy(eveningHour = newHour) } },
+                    onMinuteChange = { newMinute -> updatePresets { p -> p.copy(eveningMinute = newMinute) } }
+                )
+
+                TimePresetRow(
+                    label = when (currentLanguage) {
+                        "hi" -> "रात"
+                        "gu" -> "રાત્રે"
+                        else -> "Bedtime"
+                    },
+                    hour = presets.bedtimeHour,
+                    minute = presets.bedtimeMinute,
+                    onHourChange = { newHour -> updatePresets { p -> p.copy(bedtimeHour = newHour) } },
+                    onMinuteChange = { newMinute -> updatePresets { p -> p.copy(bedtimeMinute = newMinute) } }
+                )
+            }
+
+            Divider(Modifier.padding(vertical = 8.dp))
+
+            // Notifications: Repeat interval
             Text(
                 text = when (currentLanguage) {
-                    "hi" -> "समय प्रीसेट"
-                    "gu" -> "સમય પ્રીસેટ"
-                    else -> "Preset Times"
+                    "hi" -> "सूचना"
+                    "gu" -> "સૂચનાઓ"
+                    else -> "Notifications"
                 },
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
             )
 
-            // Reuse the existing TimePresetRow from SetReminderTimesScreen
-            TimePresetRow(
-                label = when (currentLanguage) {
-                    "hi" -> "सुबह"
-                    "gu" -> "સવાર"
-                    else -> "Morning"
+            val repeatMinutes by SettingsStore.repeatIntervalFlow(context).collectAsState(initial = 10)
+            var sliderValue by remember { mutableStateOf(repeatMinutes.toFloat()) }
+            LaunchedEffect(repeatMinutes) { sliderValue = repeatMinutes.toFloat() }
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = when (currentLanguage) {
+                        "hi" -> "दोहराने का अंतराल: ${sliderValue.toInt()} मिनट"
+                        "gu" -> "પુનરાવર્તન અંતર: ${sliderValue.toInt()} મિનિટ"
+                        else -> "Repeat interval: ${sliderValue.toInt()} min"
+                    },
+                    fontSize = 16.sp
+                )
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    onValueChangeFinished = {
+                        scope.launch { SettingsStore.setRepeatInterval(context, sliderValue.toInt()) }
+                    },
+                    valueRange = 2f..120f,
+                    steps = 118,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Privacy (single toggle for lock-screen details)
+            Text(
+                text = when (currentLanguage) {
+                    "hi" -> "गोपनीयता"
+                    "gu" -> "ગોપનીયતા"
+                    else -> "Privacy"
                 },
-                hour = presets.morningHour,
-                minute = presets.morningMinute,
-                onHourChange = { newHour -> updatePresets { p -> p.copy(morningHour = newHour) } },
-                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(morningMinute = newMinute) } }
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
             )
 
-            TimePresetRow(
-                label = when (currentLanguage) {
-                    "hi" -> "दोपहर"
-                    "gu" -> "બપોર"
-                    else -> "Lunch"
-                },
-                hour = presets.lunchHour,
-                minute = presets.lunchMinute,
-                onHourChange = { newHour -> updatePresets { p -> p.copy(lunchHour = newHour) } },
-                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(lunchMinute = newMinute) } }
-            )
-
-            TimePresetRow(
-                label = when (currentLanguage) {
-                    "hi" -> "शाम"
-                    "gu" -> "સાંજ"
-                    else -> "Evening"
-                },
-                hour = presets.eveningHour,
-                minute = presets.eveningMinute,
-                onHourChange = { newHour -> updatePresets { p -> p.copy(eveningHour = newHour) } },
-                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(eveningMinute = newMinute) } }
-            )
-
-            TimePresetRow(
-                label = when (currentLanguage) {
-                    "hi" -> "रात"
-                    "gu" -> "રાત્રે"
-                    else -> "Bedtime"
-                },
-                hour = presets.bedtimeHour,
-                minute = presets.bedtimeMinute,
-                onHourChange = { newHour -> updatePresets { p -> p.copy(bedtimeHour = newHour) } },
-                onMinuteChange = { newMinute -> updatePresets { p -> p.copy(bedtimeMinute = newMinute) } }
-            )
+            val showFullOnLock by SettingsStore.showFullOnLockscreenFlow(context)
+                .collectAsState(initial = false)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = when (currentLanguage) {
+                            "hi" -> "लॉक स्क्रीन पर पूरी जानकारी दिखाएं"
+                            "gu" -> "લોક સ્ક્રીન પર સંપૂર્ણ વિગતો બતાવો"
+                            else -> "Show full details on lock screen"
+                        },
+                        fontSize = 16.sp,
+                        color = androidx.compose.ui.graphics.Color.Black
+                    )
+                    Text(
+                        text = when (currentLanguage) {
+                            "hi" -> "डिफ़ॉल्ट रूप से छुपाया जाता है"
+                            "gu" -> "મૂળરૂપે છુપાયેલું"
+                            else -> "Hidden by default"
+                        },
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray
+                    )
+                }
+                Switch(
+                    checked = showFullOnLock,
+                    onCheckedChange = { checked ->
+                        scope.launch { SettingsStore.setShowFullOnLockscreen(context, checked) }
+                    }
+                )
+            }
 
         }
     }

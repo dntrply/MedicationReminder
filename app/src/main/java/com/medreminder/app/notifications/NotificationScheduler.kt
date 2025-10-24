@@ -9,11 +9,16 @@ import android.util.Log
 import com.medreminder.app.data.Medication
 import com.medreminder.app.data.ReminderTime
 import java.util.Calendar
+import com.medreminder.app.data.SettingsStore
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 
 object NotificationScheduler {
 
     private const val TAG = "NotificationScheduler"
-    private const val REPEAT_INTERVAL_MINUTES = 10
+    private fun getRepeatIntervalMinutes(context: Context): Int {
+        return runBlocking { SettingsStore.repeatIntervalFlow(context).first() }
+    }
 
     /**
      * Schedule notifications for a medication based on its reminder times
@@ -132,8 +137,9 @@ object NotificationScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Schedule for 10 minutes from now
-        val triggerTime = System.currentTimeMillis() + (REPEAT_INTERVAL_MINUTES * 60 * 1000)
+        // Schedule for configured minutes from now
+        val intervalMin = getRepeatIntervalMinutes(context)
+        val triggerTime = System.currentTimeMillis() + (intervalMin * 60 * 1000)
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -143,7 +149,7 @@ object NotificationScheduler {
                         triggerTime,
                         pendingIntent
                     )
-                    Log.d(TAG, "Scheduled repeat reminder #$repeatCount for $medicationName in $REPEAT_INTERVAL_MINUTES minutes")
+                    Log.d(TAG, "Scheduled repeat reminder #$repeatCount for $medicationName in $intervalMin minutes")
                 }
             } else {
                 alarmManager.setExactAndAllowWhileIdle(
@@ -151,7 +157,7 @@ object NotificationScheduler {
                     triggerTime,
                     pendingIntent
                 )
-                Log.d(TAG, "Scheduled repeat reminder #$repeatCount for $medicationName in $REPEAT_INTERVAL_MINUTES minutes")
+                Log.d(TAG, "Scheduled repeat reminder #$repeatCount for $medicationName in $intervalMin minutes")
             }
         } catch (e: SecurityException) {
             Log.e(TAG, "SecurityException scheduling repeat alarm", e)

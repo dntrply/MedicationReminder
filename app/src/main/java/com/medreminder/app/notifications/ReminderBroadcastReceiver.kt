@@ -10,6 +10,9 @@ import android.media.RingtoneManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.medreminder.app.data.SettingsStore
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import com.medreminder.app.MainActivity
 import com.medreminder.app.R
 import com.medreminder.app.data.MedicationDatabase
@@ -22,8 +25,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "ReminderReceiver"
-        private const val CHANNEL_ID = "medication_reminders"
-        private const val CHANNEL_NAME = "Medication Reminders"
+        private const val CHANNEL_ID_PRIVATE = "medication_reminders_private"
+        private const val CHANNEL_ID_FULL = "medication_reminders_full"
+        private const val CHANNEL_NAME_PRIVATE = "Medication Reminders (Private)"
+        private const val CHANNEL_NAME_FULL = "Medication Reminders (Full)"
         private const val GROUP_KEY = "medication_group"
         const val ACTION_MARK_TAKEN = "com.medreminder.app.ACTION_MARK_TAKEN"
         const val ACTION_SNOOZE = "com.medreminder.app.ACTION_SNOOZE"
@@ -62,13 +67,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Showing notification for $medicationName (repeat #$repeatCount)")
 
-        createNotificationChannel(context)
+        createNotificationChannels(context)
 
-        // Add this medication to pending tracker
+        // Add this medication to pending tracker (include repeatCount)
         PendingMedicationTracker.addPendingMedication(
             context,
             PendingMedicationTracker.PendingMedication(
-                medicationId, medicationName, medicationPhotoUri, hour, minute
+                medicationId, medicationName, medicationPhotoUri, hour, minute,
+                repeatCount = repeatCount
             )
         )
 
@@ -82,7 +88,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         }
 
         // Single medication - show individual notification with action buttons
-        createNotificationChannel(context)
+        createNotificationChannels(context)
 
         // Intent to open the app
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
@@ -140,10 +146,21 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val showFull = runBlocking { SettingsStore.showFullOnLockscreenFlow(context).first() }
+        val channelId = if (showFull) CHANNEL_ID_FULL else CHANNEL_ID_PRIVATE
+
         // Build the notification
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val km = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val isLocked = km.isKeyguardLocked
+        val title = if (!showFull && isLocked) {
+            context.getString(R.string.medication_reminder)
+        } else {
+            context.getString(R.string.time_to_take, medicationName)
+        }
+
+        val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.time_to_take, medicationName))
+            .setContentTitle(title)
             .setContentText(formatTime(hour, minute))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -159,7 +176,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             )
             .addAction(
                 R.drawable.ic_snooze,
-                context.getString(R.string.remind_me_later),
+                context.getString(
+                    R.string.remind_in_minutes,
+                    runBlocking { com.medreminder.app.data.SettingsStore.repeatIntervalFlow(context).first() }
+                ),
                 snoozePendingIntent
             )
             .addAction(
@@ -168,7 +188,21 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 skipPendingIntent
             )
             .setTimeoutAfter(0)  // Never timeout
-            .build()
+
+        if (!showFull) {
+            builder.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            val publicNotification = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_notification_medication)
+                .setContentTitle(context.getString(R.string.medication_reminder))
+                .setContentText(formatTime(hour, minute))
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+            builder.setPublicVersion(publicNotification)
+        } else {
+            builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        }
+
+        val notification = builder.build()
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(medicationId.toInt(), notification)
@@ -263,12 +297,27 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val showFull = runBlocking { SettingsStore.showFullOnLockscreenFlow(context).first() }
+        val channelId = if (showFull) CHANNEL_ID_FULL else CHANNEL_ID_PRIVATE
+
         // Build the grouped notification
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val km = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val isLocked = km.isKeyguardLocked
+        val groupTitle = if (!showFull && isLocked) {
+            context.getString(R.string.medication_reminder)
+        } else {
+            context.getString(R.string.time_to_take_multiple, medications.size)
+        }
+
+        val groupBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.time_to_take_multiple, medications.size))
-            .setContentText(medicationNames)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(medicationNames))
+            .setContentTitle(groupTitle)
+            .setContentText(if (!showFull && isLocked) formatTime(hour, minute) else medicationNames)
+            .setStyle(
+                if (!showFull && isLocked)
+                    NotificationCompat.BigTextStyle().bigText(formatTime(hour, minute))
+                else NotificationCompat.BigTextStyle().bigText(medicationNames)
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(false)
@@ -294,7 +343,21 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 skipAllPendingIntent
             )
             .setTimeoutAfter(0)
-            .build()
+
+        if (!showFull) {
+            groupBuilder.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            val publicVersion = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_notification_medication)
+                .setContentTitle(context.getString(R.string.medication_reminder))
+                .setContentText(formatTime(hour, minute))
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .build()
+            groupBuilder.setPublicVersion(publicVersion)
+        } else {
+            groupBuilder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        }
+
+        val notification = groupBuilder.build()
 
         // Use a unique notification ID for this time slot
         val notificationId = (hour * 100) + minute
@@ -369,7 +432,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                     medicationName = medicationName,
                     scheduledTime = scheduledTime,
                     takenTime = takenTime,
-                    wasOnTime = wasOnTime
+                    wasOnTime = wasOnTime,
+                    action = "TAKEN"
                 )
 
                 historyDao.insertHistory(history)
@@ -380,7 +444,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         }
 
         // Show a brief confirmation
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val channelId = CHANNEL_ID_PRIVATE
+        val confirmationNotification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(context.getString(R.string.marked_as_taken))
             .setContentText(medicationName)
@@ -420,7 +485,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         )
 
         // Show a brief confirmation
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val channelId = CHANNEL_ID_PRIVATE
+        val confirmationNotification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(context.getString(R.string.reminder_snoozed))
             .setContentText(medicationName)
@@ -447,10 +513,42 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         // Cancel all pending repeat reminders
         NotificationScheduler.cancelRepeatingReminders(context, medicationId, hour, minute)
 
-        // TODO: Record as skipped in history database
+        // Remove from pending tracker
+        PendingMedicationTracker.removePendingMedication(context, medicationId)
+
+        // Record as skipped in history database
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val database = MedicationDatabase.getDatabase(context)
+                val historyDao = database.historyDao()
+
+                // Create scheduled time
+                val scheduledCalendar = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, hour)
+                    set(java.util.Calendar.MINUTE, minute)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+
+                val history = MedicationHistory(
+                    medicationId = medicationId,
+                    medicationName = medicationName,
+                    scheduledTime = scheduledCalendar.timeInMillis,
+                    takenTime = System.currentTimeMillis(),
+                    wasOnTime = false,
+                    action = "SKIPPED"
+                )
+
+                historyDao.insertHistory(history)
+                Log.d(TAG, "Recorded skipped dose for $medicationName")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error recording skipped dose", e)
+            }
+        }
 
         // Show a brief confirmation
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val channelId = CHANNEL_ID_PRIVATE
+        val confirmationNotification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(context.getString(R.string.dose_skipped))
             .setContentText(medicationName)
@@ -486,7 +584,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         // Show confirmation
         val medicationNames = medications.joinToString(", ") { it.medicationName }
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val channelId = CHANNEL_ID_PRIVATE
+        val confirmationNotification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(context.getString(R.string.marked_as_taken))
             .setContentText(medicationNames)
@@ -536,7 +635,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         // Show confirmation
         val medicationNames = medications.joinToString(", ") { it.medicationName }
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID_PRIVATE)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(context.getString(R.string.reminder_snoozed))
             .setContentText(medicationNames)
@@ -573,7 +672,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         // Show confirmation
         val medicationNames = medications.joinToString(", ") { it.medicationName }
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID_PRIVATE)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(context.getString(R.string.dose_skipped))
             .setContentText(medicationNames)
@@ -586,24 +685,40 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         notificationManager.notify(notificationId + 90000, confirmationNotification)
     }
 
-    private fun createNotificationChannel(context: Context) {
+    private fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH  // Shows as heads-up notification
+            val notificationManager = context.getSystemService(NotificationManager::class.java)
+
+            val privateChannel = NotificationChannel(
+                CHANNEL_ID_PRIVATE,
+                CHANNEL_NAME_PRIVATE,
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = context.getString(R.string.notification_channel_description)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 500, 200, 500)
                 enableLights(true)
                 lightColor = android.graphics.Color.BLUE
-                setBypassDnd(false)  // Respect Do Not Disturb
+                setBypassDnd(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            }
+
+            val fullChannel = NotificationChannel(
+                CHANNEL_ID_FULL,
+                CHANNEL_NAME_FULL,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = context.getString(R.string.notification_channel_description)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 200, 500)
+                enableLights(true)
+                lightColor = android.graphics.Color.BLUE
+                setBypassDnd(false)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
 
-            val notificationManager = context.getSystemService(NotificationManager::class.java)
-            notificationManager?.createNotificationChannel(channel)
+            notificationManager?.createNotificationChannel(privateChannel)
+            notificationManager?.createNotificationChannel(fullChannel)
         }
     }
 

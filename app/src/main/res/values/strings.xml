@@ -81,6 +81,7 @@
     <string name="ive_taken_it">I\'ve Taken It</string>
     <string name="ive_taken_all">I\'ve Taken All</string>
     <string name="remind_me_later">Remind Me in 10 Min</string>
+    <string name="remind_in_minutes">Remind me in %1$d min</string>
     <string name="snooze_all">Snooze All</string>
     <string name="skip_dose">Skip</string>
     <string name="skip_all">Skip All</string>

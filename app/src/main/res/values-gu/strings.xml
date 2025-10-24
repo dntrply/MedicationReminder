@@ -80,6 +80,7 @@
     <string name="scheduled_for">નિર્ધારિત: %s</string>
     <string name="ive_taken_it">મેં લીધી છે</string>
     <string name="remind_me_later">10 મિનિટમાં યાદ અપાવો</string>
+    <string name="remind_in_minutes">%1$d મિનિટમાં યાદ અપાવો</string>
     <string name="dismiss">રદ કરો</string>
     <string name="marked_as_taken">લીધેલ તરીકે ચિહ્નિત</string>
     <string name="reminder_snoozed">રીમાઇન્ડર 10 મિનિટ માટે સ્નૂઝ થયું</string>

@@ -23,10 +23,17 @@ interface MedicationHistoryDao {
 
     @Query("""
         SELECT * FROM medication_history
-        WHERE takenTime >= :startOfDay AND takenTime < :endOfDay
-        ORDER BY takenTime DESC
+        WHERE scheduledTime >= :startOfDay AND scheduledTime < :endOfDay
+        ORDER BY scheduledTime DESC
     """)
     fun getHistoryForDay(startOfDay: Long, endOfDay: Long): Flow<List<MedicationHistory>>
+
+    @Query("""
+        SELECT * FROM medication_history
+        WHERE scheduledTime >= :startTime AND scheduledTime <= :endTime
+        ORDER BY scheduledTime DESC
+    """)
+    fun getHistoryForDateRange(startTime: Long, endTime: Long): Flow<List<MedicationHistory>>
 
     @Query("""
         SELECT * FROM medication_history

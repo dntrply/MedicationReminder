@@ -51,6 +51,7 @@ fun DebugDataScreen(
     // Preferences (DataStore)
     val currentLanguage by SettingsStore.languageFlow(context).collectAsState(initial = "en")
     val presetTimes by PresetTimesManager.getPresetTimesFlow(context).collectAsState(initial = PresetTimes())
+    val repeatMinutes by SettingsStore.repeatIntervalFlow(context).collectAsState(initial = 10)
 
     // Collapsible section state
     var prefsExpanded by remember { mutableStateOf(true) }
@@ -178,56 +179,28 @@ fun DebugDataScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Preferences overview (collapsible)
+                // Pending (collapsible) — moved to top
                 item {
                     CollapsibleSectionHeader(
-                        title = "PREFERENCES",
-                        expanded = prefsExpanded,
-                        onToggle = { prefsExpanded = !prefsExpanded }
+                        title = "PENDING MEDICATIONS (${pendingMeds.size})",
+                        expanded = pendingExpanded,
+                        onToggle = { pendingExpanded = !pendingExpanded }
                     )
                 }
-                if (prefsExpanded) {
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                DataRow("Language", currentLanguage)
-                                DataRow(
-                                    "Morning",
-                                    String.format("%02d:%02d", presetTimes.morningHour, presetTimes.morningMinute)
-                                )
-                                DataRow(
-                                    "Lunch",
-                                    String.format("%02d:%02d", presetTimes.lunchHour, presetTimes.lunchMinute)
-                                )
-                                DataRow(
-                                    "Evening",
-                                    String.format("%02d:%02d", presetTimes.eveningHour, presetTimes.eveningMinute)
-                                )
-                                DataRow(
-                                    "Bedtime",
-                                    String.format("%02d:%02d", presetTimes.bedtimeHour, presetTimes.bedtimeMinute)
+                if (pendingExpanded) {
+                    if (pendingMeds.isEmpty()) {
+                        item {
+                            Card {
+                                Text(
+                                    "No pending medications",
+                                    modifier = Modifier.padding(16.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
-                    }
-                }
-
-                exportMessage?.let { message ->
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
-                        ) {
-                            Text(
-                                text = message,
-                                modifier = Modifier.padding(16.dp),
-                                fontSize = 12.sp
-                            )
+                    } else {
+                        items(pendingMeds) { p ->
+                            PendingMedDebugCard(p)
                         }
                     }
                 }
@@ -285,29 +258,59 @@ fun DebugDataScreen(
                     }
                 }
 
-                // Pending (collapsible)
+                // Preferences (collapsible) — moved to bottom
                 item { Spacer(modifier = Modifier.height(8.dp)) }
                 item {
                     CollapsibleSectionHeader(
-                        title = "PENDING MEDICATIONS (${pendingMeds.size})",
-                        expanded = pendingExpanded,
-                        onToggle = { pendingExpanded = !pendingExpanded }
+                        title = "PREFERENCES",
+                        expanded = prefsExpanded,
+                        onToggle = { prefsExpanded = !prefsExpanded }
                     )
                 }
-                if (pendingExpanded) {
-                    if (pendingMeds.isEmpty()) {
-                        item {
-                            Card {
-                                Text(
-                                    "No pending medications",
-                                    modifier = Modifier.padding(16.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (prefsExpanded) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                DataRow("Language", currentLanguage)
+                                DataRow(
+                                    "Morning",
+                                    String.format("%02d:%02d", presetTimes.morningHour, presetTimes.morningMinute)
                                 )
+                                DataRow(
+                                    "Lunch",
+                                    String.format("%02d:%02d", presetTimes.lunchHour, presetTimes.lunchMinute)
+                                )
+                                DataRow(
+                                    "Evening",
+                                    String.format("%02d:%02d", presetTimes.eveningHour, presetTimes.eveningMinute)
+                                )
+                                DataRow(
+                                    "Bedtime",
+                                    String.format("%02d:%02d", presetTimes.bedtimeHour, presetTimes.bedtimeMinute)
+                                )
+                                DataRow("Repeat Interval", "$repeatMinutes min")
                             }
                         }
-                    } else {
-                        items(pendingMeds) { p ->
-                            PendingMedDebugCard(p)
+                    }
+                }
+
+                // Export message (keep at bottom)
+                exportMessage?.let { message ->
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
+                        ) {
+                            Text(
+                                text = message,
+                                modifier = Modifier.padding(16.dp),
+                                fontSize = 12.sp
+                            )
                         }
                     }
                 }
@@ -402,6 +405,7 @@ fun PendingMedDebugCard(p: PendingMedicationTracker.PendingMedication) {
             DataRow("Name", p.medicationName)
             DataRow("Time", "${p.hour}:${String.format("%02d", p.minute)}")
             DataRow("Timestamp", Date(p.timestamp).toString())
+            DataRow("Issued So Far", (p.repeatCount + 1).toString())
         }
     }
 }

@@ -32,6 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -180,11 +181,11 @@ class MainActivity : ComponentActivity() {
                         onDebugData = {
                             currentScreen = "debug_data"
                         },
-                        onOutstandingMedications = {
-                            currentScreen = "outstanding_medications"
-                        },
                         onOpenSettings = {
                             currentScreen = "settings"
+                        },
+                        onViewHistory = {
+                            currentScreen = "history"
                         }
                     )
                     "add_medication" -> AddMedicationScreen(
@@ -420,13 +421,6 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    "outstanding_medications" -> {
-                        com.medreminder.app.ui.OutstandingMedicationsScreen(
-                            onBack = {
-                                currentScreen = "home"
-                            }
-                        )
-                    }
                     "settings" -> {
                         SettingsScreen(
                             currentLanguage = currentLanguage,
@@ -436,6 +430,12 @@ class MainActivity : ComponentActivity() {
                                 saveLanguagePreference(this@MainActivity, newLang)
                                 recreate()
                             }
+                        )
+                    }
+                    "history" -> {
+                        com.medreminder.app.ui.HistoryScreen(
+                            currentLanguage = currentLanguage,
+                            onBack = { currentScreen = "home" }
                         )
                     }
                 }
@@ -485,15 +485,47 @@ fun HomeScreen(
     onAddMedication: () -> Unit = {},
     onEditMedication: (Medication) -> Unit = {},
     onDebugData: () -> Unit = {},
-    onOutstandingMedications: () -> Unit = {},
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onViewHistory: () -> Unit = {}
 ) {
     val medications by viewModel.medications.collectAsState(initial = emptyList())
     var showExitDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
-    var showTimelineView by remember { mutableStateOf(false) }
+    var showTimelineView by remember { mutableStateOf(true) } // Default to Timeline view
     var timelineViewCounter by remember { mutableStateOf(0) }
     val context = LocalContext.current
+
+    // State for collapsible lower section
+    var isLowerSectionExpanded by remember { mutableStateOf(true) }
+
+    // Observe pending medications for overdue detection
+    val pendingMeds by PendingMedicationTracker.pendingMedicationsFlow(context)
+        .collectAsState(initial = emptyList())
+
+    // Filter overdue medications (from previous days)
+    val currentCalendar = java.util.Calendar.getInstance()
+    val today = currentCalendar.get(java.util.Calendar.DAY_OF_YEAR)
+    val thisYear = currentCalendar.get(java.util.Calendar.YEAR)
+
+    val overdueMedications = pendingMeds.filter { pending ->
+        // Calculate scheduled time from timestamp and hour/minute
+        val timestampCal = java.util.Calendar.getInstance()
+        timestampCal.timeInMillis = pending.timestamp
+
+        // Set the calendar to the scheduled time
+        val scheduledCal = java.util.Calendar.getInstance()
+        scheduledCal.timeInMillis = pending.timestamp
+        scheduledCal.set(java.util.Calendar.HOUR_OF_DAY, pending.hour)
+        scheduledCal.set(java.util.Calendar.MINUTE, pending.minute)
+        scheduledCal.set(java.util.Calendar.SECOND, 0)
+        scheduledCal.set(java.util.Calendar.MILLISECOND, 0)
+
+        val pendingDay = scheduledCal.get(java.util.Calendar.DAY_OF_YEAR)
+        val pendingYear = scheduledCal.get(java.util.Calendar.YEAR)
+
+        // Overdue if from a previous day or previous year
+        (pendingYear < thisYear) || (pendingYear == thisYear && pendingDay < today)
+    }
 
     // Handle back button press - show exit confirmation
     // Only enable when dialogs are not open to avoid conflicts
@@ -503,6 +535,23 @@ fun HomeScreen(
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.White,
+        floatingActionButton = {
+            // Only show FAB when there are medications (otherwise the empty state has its own large Add button)
+            if (medications.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = onAddMedication,
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.add_medication),
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -550,52 +599,13 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
-                                    Text(stringResource(R.string.feature_schedule), fontSize = 18.sp)
-                                }
-                            },
-                            onClick = {
-                                showMenu = false
-                                // TODO: Navigate to schedule
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
                                     Icon(Icons.Default.History, contentDescription = null)
                                     Text(stringResource(R.string.feature_history), fontSize = 18.sp)
                                 }
                             },
                             onClick = {
                                 showMenu = false
-                                // TODO: Navigate to history
-                            }
-                        )
-                        Divider()
-                        
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Icon(Icons.Default.Medication, contentDescription = null)
-                                    Text(
-                                        when (currentLanguage) {
-                                            "hi" -> "दवाएं लें"
-                                            "gu" -> "દવા લો"
-                                            else -> "Medications to Take"
-                                        },
-                                        fontSize = 18.sp
-                                    )
-                                }
-                            },
-                            onClick = {
-                                showMenu = false
-                                onOutstandingMedications()
+                                onViewHistory()
                             }
                         )
                         Divider()
@@ -721,13 +731,99 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // View toggle button
-                Row(
+                // Overdue Medications Section - Expandable when lower section is collapsed
+                if (overdueMedications.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(androidx.compose.ui.graphics.Color(0xFFFFF3F3)) // Light red background
+                            .then(
+                                if (isLowerSectionExpanded)
+                                    Modifier.heightIn(max = 200.dp)
+                                else
+                                    Modifier.weight(1f) // Take up remaining space when lower section is collapsed
+                            )
+                            .verticalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
+                    ) {
+                        OverdueMedicationsSection(
+                            overdueMedications = overdueMedications,
+                            medications = medications,
+                            currentLanguage = currentLanguage,
+                            context = context
+                        )
+                    }
+
+                    // Divider after overdue section
+                    Divider(
+                        thickness = 1.dp,
+                        color = androidx.compose.ui.graphics.Color(0xFFE0E0E0)
+                    )
+                }
+
+                // Lower section with drag handle and collapsible content
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Center
+                        .then(
+                            if (isLowerSectionExpanded)
+                                Modifier.weight(1f)
+                            else
+                                Modifier.height(80.dp) // Just show the drag handle when collapsed
+                        )
+                        .background(androidx.compose.ui.graphics.Color.White)
                 ) {
+                    // Drag handle
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clickable { isLowerSectionExpanded = !isLowerSectionExpanded }
+                            .background(androidx.compose.ui.graphics.Color(0xFFF8F8F8)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isLowerSectionExpanded)
+                                    Icons.Default.ExpandMore
+                                else
+                                    Icons.Default.ExpandLess,
+                                contentDescription = if (isLowerSectionExpanded) "Collapse" else "Expand",
+                                tint = androidx.compose.ui.graphics.Color.Gray
+                            )
+                            Text(
+                                text = if (isLowerSectionExpanded)
+                                    when (currentLanguage) {
+                                        "hi" -> "छुपाएं"
+                                        "gu" -> "છુપાવો"
+                                        else -> "Collapse"
+                                    }
+                                else
+                                    when (currentLanguage) {
+                                        "hi" -> "विस्तार करें"
+                                        "gu" -> "વિસ્તાર કરો"
+                                        else -> "Expand"
+                                    },
+                                fontSize = 14.sp,
+                                color = androidx.compose.ui.graphics.Color.Gray,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    // Only show content when expanded
+                    if (isLowerSectionExpanded) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            // View toggle button
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
                     // List View Button
                     Card(
                         modifier = Modifier
@@ -822,6 +918,32 @@ fun HomeScreen(
                     }
                 }
 
+                // Section Header for main content
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = when {
+                            showTimelineView -> when (currentLanguage) {
+                                "hi" -> "आज का कार्यक्रम"
+                                "gu" -> "આજનું શેડ્યૂલ"
+                                else -> "Today's Schedule"
+                            }
+                            else -> when (currentLanguage) {
+                                "hi" -> "आपकी दवाएं"
+                                "gu" -> "તમારી દવાઓ"
+                                else -> "Your Medications"
+                            }
+                        },
+                        fontSize = 16.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = androidx.compose.ui.graphics.Color(0xFF424242)
+                    )
+                }
+
                 if (!showTimelineView) {
                     // List View
                     LazyColumn(
@@ -848,46 +970,19 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
-                } else {
-                    // Timeline View
-                    TimelineView(
-                        medications = medications,
-                        currentLanguage = currentLanguage,
-                        viewCounter = timelineViewCounter,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                            } else {
+                                // Timeline View
+                                TimelineView(
+                                    medications = medications,
+                                    currentLanguage = currentLanguage,
+                                    viewCounter = timelineViewCounter,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
 
-                // Floating Add Button at bottom
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(80.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                    onClick = onAddMedication
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp),
-                            tint = androidx.compose.ui.graphics.Color.White
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = stringResource(R.string.add_medication),
-                            fontSize = 22.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                            color = androidx.compose.ui.graphics.Color.White
-                        )
+                            // Add some bottom padding to account for FAB
+                            Spacer(modifier = Modifier.height(80.dp))
+                        }
                     }
                 }
             }
@@ -1267,6 +1362,251 @@ data class MedicationTimeSlot(
 )
 
 @Composable
+fun MedicationActionDialog(
+    medication: Medication,
+    scheduledTime: Long,
+    hour: Int,
+    minute: Int,
+    currentLanguage: String,
+    onDismiss: () -> Unit,
+    context: Context,
+    isOverdue: Boolean = false
+) {
+    // Reuse the existing action palette
+    MedicationActionPalette(
+        medication = medication,
+        hour = hour,
+        minute = minute,
+        onDismiss = onDismiss,
+        currentLanguage = currentLanguage
+    )
+}
+
+@Composable
+fun OverdueMedicationsSection(
+    overdueMedications: List<PendingMedicationTracker.PendingMedication>,
+    medications: List<Medication>,
+    currentLanguage: String,
+    context: Context
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = androidx.compose.ui.graphics.Color(0xFFFFEBEE) // Light red background
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header with alert icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color(0xFFD32F2F), // Dark red
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = when (currentLanguage) {
+                        "hi" -> "बकाया दवाएं"
+                        "gu" -> "મુદતવીતી દવાઓ"
+                        else -> "OVERDUE MEDICATIONS"
+                    },
+                    fontSize = 20.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = androidx.compose.ui.graphics.Color(0xFFD32F2F)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // List of overdue medications
+            overdueMedications.forEach { pending ->
+                val medication = medications.firstOrNull { it.id == pending.medicationId }
+                if (medication != null) {
+                    OverdueMedicationCard(
+                        medication = medication,
+                        pending = pending,
+                        currentLanguage = currentLanguage,
+                        context = context
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OverdueMedicationCard(
+    medication: Medication,
+    pending: PendingMedicationTracker.PendingMedication,
+    currentLanguage: String,
+    context: Context
+) {
+    var showActionDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = androidx.compose.ui.graphics.Color.White
+        ),
+        border = BorderStroke(3.dp, androidx.compose.ui.graphics.Color(0xFFD32F2F)), // Dark red border
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = { showActionDialog = true }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Medication image with LATE badge
+            Box {
+                if (medication.photoUri != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(Uri.parse(medication.photoUri)),
+                        contentDescription = medication.name,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(androidx.compose.ui.graphics.Color.White),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(androidx.compose.ui.graphics.Color(0xFFFFEBEE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Medication,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = androidx.compose.ui.graphics.Color(0xFFD32F2F)
+                        )
+                    }
+                }
+
+                // LATE badge with clock icon
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .background(
+                            androidx.compose.ui.graphics.Color(0xFFD32F2F),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = androidx.compose.ui.graphics.Color.White
+                        )
+                        Text(
+                            text = "LATE",
+                            fontSize = 10.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            color = androidx.compose.ui.graphics.Color.White
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Medication info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = medication.name,
+                    fontSize = 18.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = androidx.compose.ui.graphics.Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Format time with context (Yesterday or date)
+                val scheduledCal = java.util.Calendar.getInstance()
+                scheduledCal.timeInMillis = pending.timestamp
+                scheduledCal.set(java.util.Calendar.HOUR_OF_DAY, pending.hour)
+                scheduledCal.set(java.util.Calendar.MINUTE, pending.minute)
+
+                val currentCal = java.util.Calendar.getInstance()
+                val yesterday = java.util.Calendar.getInstance().apply {
+                    add(java.util.Calendar.DAY_OF_YEAR, -1)
+                }
+
+                val timeStr = String.format("%02d:%02d", pending.hour, pending.minute)
+                val dateStr = when {
+                    scheduledCal.get(java.util.Calendar.DAY_OF_YEAR) == yesterday.get(java.util.Calendar.DAY_OF_YEAR) &&
+                    scheduledCal.get(java.util.Calendar.YEAR) == yesterday.get(java.util.Calendar.YEAR) -> {
+                        when (currentLanguage) {
+                            "hi" -> "कल $timeStr"
+                            "gu" -> "ગઈકાલે $timeStr"
+                            else -> "Yesterday $timeStr"
+                        }
+                    }
+                    else -> {
+                        val sdf = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+                        sdf.format(scheduledCal.time)
+                    }
+                }
+
+                Text(
+                    text = dateStr,
+                    fontSize = 14.sp,
+                    color = androidx.compose.ui.graphics.Color(0xFFD32F2F),
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+            }
+
+            // Arrow icon to indicate clickable
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color(0xFFD32F2F),
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+
+    // Action dialog
+    if (showActionDialog) {
+        MedicationActionDialog(
+            medication = medication,
+            scheduledTime = pending.timestamp,
+            hour = pending.hour,
+            minute = pending.minute,
+            currentLanguage = currentLanguage,
+            onDismiss = { showActionDialog = false },
+            context = context,
+            isOverdue = true
+        )
+    }
+}
+
+@Composable
 fun TimelineView(
     medications: List<Medication>,
     currentLanguage: String,
@@ -1326,8 +1666,28 @@ fun TimelineView(
     }
 
     // Observe pending medications reactively from DataStore
-    val pendingMeds by PendingMedicationTracker.pendingMedicationsFlow(context)
+    val allPendingMeds by PendingMedicationTracker.pendingMedicationsFlow(context)
         .collectAsState(initial = emptyList())
+
+    // Filter to only TODAY's pending medications (exclude overdue from previous days)
+    val pendingMeds = remember(allPendingMeds) {
+        val currentCal = java.util.Calendar.getInstance()
+        val today = currentCal.get(java.util.Calendar.DAY_OF_YEAR)
+        val thisYear = currentCal.get(java.util.Calendar.YEAR)
+
+        allPendingMeds.filter { pending ->
+            val scheduledCal = java.util.Calendar.getInstance()
+            scheduledCal.timeInMillis = pending.timestamp
+            scheduledCal.set(java.util.Calendar.HOUR_OF_DAY, pending.hour)
+            scheduledCal.set(java.util.Calendar.MINUTE, pending.minute)
+
+            val pendingDay = scheduledCal.get(java.util.Calendar.DAY_OF_YEAR)
+            val pendingYear = scheduledCal.get(java.util.Calendar.YEAR)
+
+            // Only include today's pending medications
+            (pendingYear == thisYear && pendingDay == today)
+        }
+    }
 
     // Calculate start and end of day
     val (startOfDay, endOfDay) = remember {
@@ -1439,20 +1799,8 @@ fun TimelineView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(8.dp)
     ) {
-        // Header
-        Text(
-            text = when (currentLanguage) {
-                "hi" -> "दैनिक समयरेखा"
-                "gu" -> "દૈનિક સમયરેખા"
-                else -> "Daily Timeline"
-            },
-            fontSize = 24.sp,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            color = androidx.compose.ui.graphics.Color.Black,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
 
         if (timeSlots.isEmpty()) {
             // No reminders set
@@ -1484,9 +1832,11 @@ fun TimelineView(
                 }
             }
         } else {
-            // Timeline with horizontal scrolling
+            // Timeline with horizontal and vertical scrolling
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
             ) {
                 // 24-hour axis with horizontal scroll
                 Row(
@@ -1505,10 +1855,11 @@ fun TimelineView(
                             // Hour label
                             Text(
                                 text = formatHourLabel(hour),
-                                fontSize = 16.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                fontSize = 14.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                 color = androidx.compose.ui.graphics.Color(0xFF4A90E2),
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                maxLines = 1
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1516,66 +1867,60 @@ fun TimelineView(
                             // Container for timeline and medications
                             Box(
                                 modifier = Modifier
-                                    .width(100.dp)
-                                    .height(400.dp),
-                                contentAlignment = Alignment.TopCenter
+                                    .widthIn(min = 100.dp, max = 200.dp)
+                                    .height(360.dp),
+                                contentAlignment = Alignment.TopStart
                             ) {
                                 // Hour marker line (centered)
                                 Box(
                                     modifier = Modifier
                                         .width(2.dp)
-                                        .height(400.dp)
+                                        .height(360.dp)
                                         .background(androidx.compose.ui.graphics.Color(0xFFE0E0E0))
                                 )
 
-                                // Find medications for this hour
-                                val medicationsInHour = timeSlots.filter { slot ->
-                                    slot.hour == hour
-                                }.sortedBy { it.minute }
+                                // Find medications for this hour and bucket them into 4 x 15-minute slices
+                                val medicationsInHour = timeSlots.filter { it.hour == hour }.sortedBy { it.minute }
+                                val hourHeightDp = 360f
+                                val bucketCount = 4
+                                val bucketHeightDp = hourHeightDp / bucketCount
+                                // Visual tuning for tile layout
+                                val tileBlockDp = 96f // image + label + spacing (larger to avoid clipping)
+                                val verticalStepFactor = 0.40f // 40% downward step for visible overlap
 
-                                // Group medications within 30-minute intervals
-                                val intervalGroups = mutableListOf<List<MedicationTimeSlot>>()
-                                var currentGroup = mutableListOf<MedicationTimeSlot>()
-
-                                medicationsInHour.forEachIndexed { index, slot ->
-                                    if (currentGroup.isEmpty()) {
-                                        currentGroup.add(slot)
-                                    } else {
-                                        val firstInGroup = currentGroup.first()
-                                        val timeDiff = (slot.hour * 60 + slot.minute) - (firstInGroup.hour * 60 + firstInGroup.minute)
-
-                                        if (timeDiff <= 30) {
-                                            // Within 30 minutes, add to current group
-                                            currentGroup.add(slot)
-                                        } else {
-                                            // Start new group
-                                            intervalGroups.add(currentGroup.toList())
-                                            currentGroup.clear()
-                                            currentGroup.add(slot)
-                                        }
-                                    }
-                                }
-                                if (currentGroup.isNotEmpty()) {
-                                    intervalGroups.add(currentGroup)
+                                // Build buckets: 0..3 => 00-14, 15-29, 30-44, 45-59
+                                val buckets: Map<Int, List<MedicationTimeSlot>> = (0 until bucketCount).associateWith { idx ->
+                                    medicationsInHour.filter { it.minute / 15 == idx }
                                 }
 
-                                // Display each interval group
-                                intervalGroups.forEach { group ->
-                                    val firstSlot = group.first()
-                                    val position = (firstSlot.minute / 60f) * 400f
+                                buckets.forEach { (bucketIndex, group) ->
+                                    if (group.isEmpty()) return@forEach
 
-                                    // Stack medications vertically within the group
-                                    Column(
-                                        modifier = Modifier
-                                            .offset(
-                                                x = 10.dp,
-                                                y = position.dp
-                                            )
-                                            .width(80.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        group.forEach { slot ->
+                                    // Base Y for this bucket
+                                    val bucketTop = bucketIndex * bucketHeightDp
+                                    val bucketBottom = bucketTop + bucketHeightDp
+
+                                    // Stack items with overlap inside the bucket
+                                    // Reverse order so earlier medications appear on top (more visible/urgent)
+                                    group.reversed().forEachIndexed { reverseIdx, slot ->
+                                        val idx = group.size - 1 - reverseIdx
+
+                                        // Vertical offset: shift later items down for visible overlap
+                                        val verticalStepDp = 20f // vertical shift per medication
+                                        val yOffset = idx * verticalStepDp
+                                        val position = bucketTop + yOffset
+
+                                        // Horizontal offset: push later items right
+                                        val horizontalStepDp = 24f // horizontal shift per medication
+                                        val xOffset = idx * horizontalStepDp
+
+                                        Column(
+                                            modifier = Modifier
+                                                .offset(x = xOffset.dp, y = position.dp)
+                                                .wrapContentWidth(),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
                                             // Check if this medication has been taken
                                             val currentCalendar = java.util.Calendar.getInstance()
                                             val currentHour = currentCalendar.get(java.util.Calendar.HOUR_OF_DAY)
@@ -1629,10 +1974,21 @@ fun TimelineView(
                                                 horizontalAlignment = Alignment.CenterHorizontally
                                             ) {
                                                 // Medication image with border for outstanding meds
+                                                // Earlier medications get higher elevation (they're on top)
+                                                val elevation = if (group.size > 1) {
+                                                    (2 + (group.size - idx - 1) * 2).dp
+                                                } else {
+                                                    2.dp
+                                                }
                                                 Box(
-                                                    modifier = Modifier.clickable {
-                                                        selectedMedication = slot
-                                                    }
+                                                    modifier = Modifier
+                                                        .shadow(
+                                                            elevation = elevation,
+                                                            shape = RoundedCornerShape(8.dp)
+                                                        )
+                                                        .clickable {
+                                                            selectedMedication = slot
+                                                        }
                                                 ) {
                                                     if (slot.medication.photoUri != null) {
                                                         Image(
@@ -1848,7 +2204,7 @@ fun formatHourLabel(hour: Int): String {
         hour > 12 -> hour - 12
         else -> hour
     }
-    return String.format("%02d:00\n%s", displayHour, amPm)
+    return String.format("%02d:00 %s", displayHour, amPm)
 }
 
 // Reaction palette popup for timeline medications
@@ -2045,6 +2401,57 @@ fun AddMedicationScreen(
     onNext: (String, String?, String?) -> Unit, // name, photoUri, audioPath
     onAutosaveDetails: (String, String?, String?) -> Unit = { _, _, _ -> }
 ) {
+    // Wizard state
+    var wizardStep by remember { mutableStateOf(1) }
+    var medicationName by remember { mutableStateOf(initialName) }
+    var selectedPhotoUri by remember { mutableStateOf(initialPhotoUri) }
+    var audioPath by remember { mutableStateOf(initialAudioPath) }
+
+    when (wizardStep) {
+        1 -> AddMedicationStep1(
+            currentLanguage = currentLanguage,
+            initialName = medicationName,
+            initialPhotoUri = selectedPhotoUri,
+            onBack = onBack,
+            onNext = { name, photoUri ->
+                medicationName = name
+                selectedPhotoUri = photoUri
+                // Autosave after step 1
+                onAutosaveDetails(name, photoUri, audioPath)
+                wizardStep = 2
+            }
+        )
+        2 -> AddMedicationStep2(
+            currentLanguage = currentLanguage,
+            initialAudioPath = audioPath,
+            onBack = { wizardStep = 1 },
+            onNext = { audio ->
+                audioPath = audio
+                // Final callback to proceed to schedule
+                onNext(medicationName, selectedPhotoUri, audio)
+            },
+            onSkip = {
+                // Skip audio, proceed directly to schedule
+                onNext(medicationName, selectedPhotoUri, null)
+            },
+            onAutosaveAudio = { audio ->
+                audioPath = audio
+                onAutosaveDetails(medicationName, selectedPhotoUri, audio)
+            }
+        )
+    }
+}
+
+// Step 1: Photo + Name
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddMedicationStep1(
+    currentLanguage: String = "en",
+    initialName: String = "",
+    initialPhotoUri: String? = null,
+    onBack: () -> Unit,
+    onNext: (String, String?) -> Unit // name, photoUri
+) {
     var medicationName by remember { mutableStateOf(initialName) }
     var showPhotoOptions by remember { mutableStateOf(false) }
     var selectedImageUri by remember {
@@ -2052,56 +2459,7 @@ fun AddMedicationScreen(
     }
     var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Audio recording state
-    var audioPath by remember { mutableStateOf(initialAudioPath) }
-    var isRecording by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(false) }
-    var recordingDuration by remember { mutableStateOf(0L) }
-
     val context = LocalContext.current
-
-    // Debug logging for audio path
-    LaunchedEffect(initialAudioPath) {
-        Log.d("AddMedicationScreen", "=== AUDIO PATH DEBUG ===")
-        Log.d("AddMedicationScreen", "Initial audio path: $initialAudioPath")
-        Log.d("AddMedicationScreen", "Current audio path: $audioPath")
-        if (initialAudioPath != null) {
-            val file = java.io.File(initialAudioPath)
-            Log.d("AddMedicationScreen", "File exists: ${file.exists()}")
-            Log.d("AddMedicationScreen", "File size: ${if (file.exists()) file.length() else 0} bytes")
-        }
-    }
-    val audioRecorder = remember { com.medreminder.app.utils.AudioRecorder(context) }
-    val audioPlayer = remember { com.medreminder.app.utils.AudioPlayer(context) }
-
-    // Update recording duration every second while recording
-    LaunchedEffect(isRecording) {
-        while (isRecording) {
-            recordingDuration = audioRecorder.getRecordingDuration()
-            kotlinx.coroutines.delay(100)
-        }
-    }
-
-    // Cleanup audio resources when screen is disposed
-    DisposableEffect(Unit) {
-        onDispose {
-            // Only cancel if actively recording (don't delete saved files!)
-            if (isRecording) {
-                audioRecorder.cancelRecording()
-            }
-            audioPlayer.release()
-        }
-    }
-
-    // Autosave debounce for name/photo/audio changes
-    LaunchedEffect(medicationName, selectedImageUri, audioPath) {
-        // Only autosave when user has provided at least one meaningful field
-        val hasData = medicationName.isNotBlank() || selectedImageUri != null || audioPath != null
-        if (hasData) {
-            kotlinx.coroutines.delay(350)
-            onAutosaveDetails(medicationName, selectedImageUri?.toString(), audioPath)
-        }
-    }
 
     // Create a temporary file for camera photos
     fun createImageFile(): Uri {
@@ -2155,20 +2513,6 @@ fun AddMedicationScreen(
         }
     }
 
-    // Audio permission launcher
-    val audioPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // Start recording
-            val file = audioRecorder.startRecording()
-            if (file != null) {
-                isRecording = true
-                recordingDuration = 0L
-            }
-        }
-    }
-
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.White,
         topBar = {
@@ -2200,23 +2544,38 @@ fun AddMedicationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Progress indicator
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = when (currentLanguage) {
+                        "hi" -> "चरण 1 / 3"
+                        "gu" -> "પગલું 1 / 3"
+                        else -> "Step 1 of 3"
+                    },
+                    fontSize = 16.sp,
+                    color = androidx.compose.ui.graphics.Color.Gray,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+            }
             // Large instruction text
             Text(
                 text = when (currentLanguage) {
-                    "hi" -> "अपनी दवा जोड़ें"
-                    "gu" -> "તમારી દવા ઉમેરો"
-                    else -> "Add Your Medication"
+                    "hi" -> "आपकी दवा क्या है?"
+                    "gu" -> "તમારી દવા શું છે?"
+                    else -> "What is your medication?"
                 },
                 fontSize = 28.sp,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 color = androidx.compose.ui.graphics.Color.Black
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Photo Card - shows image if selected, otherwise camera icon
             Card(
@@ -2322,183 +2681,14 @@ fun AddMedicationScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Flexible spacer to push button to bottom
+            Spacer(modifier = Modifier.weight(1f))
 
-            // Audio Note Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.audio_instructions),
-                        fontSize = 18.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                    )
-
-                    if (audioPath != null) {
-                        // Show audio controls when audio exists
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AudioFile,
-                                contentDescription = null,
-                                tint = androidx.compose.ui.graphics.Color(0xFF4A90E2),
-                                modifier = Modifier.size(32.dp)
-                            )
-
-                            // Play/Stop button
-                            Button(
-                                onClick = {
-                                    if (isPlaying) {
-                                        audioPlayer.stop()
-                                        isPlaying = false
-                                    } else {
-                                        audioPlayer.play(
-                                            audioPath,
-                                            onCompletion = { isPlaying = false },
-                                            onError = { isPlaying = false }
-                                        )
-                                        isPlaying = true
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                                    contentDescription = null
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    if (isPlaying) stringResource(R.string.stop_playback) else stringResource(R.string.play_audio),
-                                    fontSize = 16.sp
-                                )
-                            }
-
-                            // Delete button
-                            IconButton(
-                                onClick = {
-                                    audioPlayer.stop()
-                                    audioRecorder.deleteAudioFile(audioPath)
-                                    audioPath = null
-                                    isPlaying = false
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = stringResource(R.string.delete_audio),
-                                    tint = androidx.compose.ui.graphics.Color(0xFFE53935),
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
-                        }
-                    } else if (isRecording) {
-                        // Show recording controls
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
-                                        .background(androidx.compose.ui.graphics.Color.Red)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = String.format("%02d:%02d", recordingDuration / 1000 / 60, recordingDuration / 1000 % 60),
-                                    fontSize = 24.sp,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                    color = androidx.compose.ui.graphics.Color.Red
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                // Stop and Save button
-                                Button(
-                                    onClick = {
-                                        val file = audioRecorder.stopRecording()
-                                        isRecording = false
-                                        // Delete old audio file if it exists before setting new path
-                                        if (audioPath != null && audioPath != file?.absolutePath) {
-                                            audioRecorder.deleteAudioFile(audioPath)
-                                        }
-                                        audioPath = file?.absolutePath
-                                        recordingDuration = 0L
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
-                                    )
-                                ) {
-                                    Icon(imageVector = Icons.Default.Stop, contentDescription = null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.stop_recording))
-                                }
-
-                                // Cancel button
-                                OutlinedButton(
-                                    onClick = {
-                                        audioRecorder.cancelRecording()
-                                        isRecording = false
-                                        recordingDuration = 0L
-                                    },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(stringResource(R.string.cancel))
-                                }
-                            }
-                        }
-                    } else {
-                        // Show record button
-                        Button(
-                            onClick = {
-                                audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                            )
-                        ) {
-                            Icon(imageVector = Icons.Default.Mic, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.record_audio), fontSize = 18.sp)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Large Next Button
+            // Next Button
             Button(
                 onClick = {
                     if (medicationName.isNotEmpty()) {
-                        // Stop any playback before proceeding
-                        audioPlayer.stop()
-                        onNext(medicationName, selectedImageUri?.toString(), audioPath)
+                        onNext(medicationName, selectedImageUri?.toString())
                     }
                 },
                 modifier = Modifier
@@ -2634,3 +2824,396 @@ fun AddMedicationScreen(
         }
     }
 }
+
+// Step 2: Audio Instructions
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddMedicationStep2(
+    currentLanguage: String = "en",
+    initialAudioPath: String? = null,
+    onBack: () -> Unit,
+    onNext: (String?) -> Unit, // audioPath
+    onSkip: () -> Unit,
+    onAutosaveAudio: (String?) -> Unit
+) {
+    // Audio recording state
+    var audioPath by remember { mutableStateOf(initialAudioPath) }
+    var isRecording by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var recordingDuration by remember { mutableStateOf(0L) }
+
+    val context = LocalContext.current
+    val audioRecorder = remember { com.medreminder.app.utils.AudioRecorder(context) }
+    val audioPlayer = remember { com.medreminder.app.utils.AudioPlayer(context) }
+
+    // Update recording duration every second while recording
+    LaunchedEffect(isRecording) {
+        while (isRecording) {
+            recordingDuration = audioRecorder.getRecordingDuration()
+            kotlinx.coroutines.delay(100)
+        }
+    }
+
+    // Cleanup audio resources when screen is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            // Only cancel if actively recording (don't delete saved files!)
+            if (isRecording) {
+                audioRecorder.cancelRecording()
+            }
+            audioPlayer.release()
+        }
+    }
+
+    // Autosave debounce for audio changes
+    LaunchedEffect(audioPath) {
+        if (audioPath != null) {
+            kotlinx.coroutines.delay(350)
+            onAutosaveAudio(audioPath)
+        }
+    }
+
+    // Audio permission launcher
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Start recording
+            val file = audioRecorder.startRecording()
+            if (file != null) {
+                isRecording = true
+                recordingDuration = 0L
+            }
+        }
+    }
+
+    Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.White,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        stringResource(R.string.add_medication),
+                        color = androidx.compose.ui.graphics.Color.White
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2),
+                    titleContentColor = androidx.compose.ui.graphics.Color.White
+                )
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
+            // Progress indicator
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = when (currentLanguage) {
+                        "hi" -> "चरण 2 / 3"
+                        "gu" -> "પગલું 2 / 3"
+                        else -> "Step 2 of 3"
+                    },
+                    fontSize = 16.sp,
+                    color = androidx.compose.ui.graphics.Color.Gray,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Large instruction text
+            Text(
+                text = when (currentLanguage) {
+                    "hi" -> "आवाज़ निर्देश जोड़ें?"
+                    "gu" -> "વૉઇસ સૂચનાઓ ઉમેરો?"
+                    else -> "Add voice instructions?"
+                },
+                fontSize = 28.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = when (currentLanguage) {
+                    "hi" -> "(वैकल्पिक)"
+                    "gu" -> "(વૈકલ્પિક)"
+                    else -> "(Optional)"
+                },
+                fontSize = 18.sp,
+                color = androidx.compose.ui.graphics.Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Audio Note Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.audio_instructions),
+                        fontSize = 18.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+
+                    if (audioPath != null) {
+                        // Show audio controls when audio exists
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Play/Stop button
+                            Button(
+                                onClick = {
+                                    if (isPlaying) {
+                                        audioPlayer.stop()
+                                        isPlaying = false
+                                    } else {
+                                        audioPlayer.play(
+                                            audioPath,
+                                            onCompletion = { isPlaying = false },
+                                            onError = { isPlaying = false }
+                                        )
+                                        isPlaying = true
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                    contentDescription = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    if (isPlaying) stringResource(R.string.stop_playback) else stringResource(R.string.play_audio),
+                                    fontSize = 16.sp
+                                )
+                            }
+
+                            // Delete button
+                            IconButton(
+                                onClick = {
+                                    audioPlayer.stop()
+                                    audioRecorder.deleteAudioFile(audioPath)
+                                    audioPath = null
+                                    isPlaying = false
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.delete_audio),
+                                    tint = androidx.compose.ui.graphics.Color(0xFFE53935),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    } else if (isRecording) {
+                        // Show recording controls
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .clip(CircleShape)
+                                        .background(androidx.compose.ui.graphics.Color.Red)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = String.format("%02d:%02d", recordingDuration / 1000 / 60, recordingDuration / 1000 % 60),
+                                    fontSize = 24.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = androidx.compose.ui.graphics.Color.Red
+                                )
+                            }
+
+                            // Stop and Save button
+                            Button(
+                                onClick = {
+                                    val file = audioRecorder.stopRecording()
+                                    isRecording = false
+                                    // Delete old audio file if it exists before setting new path
+                                    if (audioPath != null && audioPath != file?.absolutePath) {
+                                        audioRecorder.deleteAudioFile(audioPath)
+                                    }
+                                    audioPath = file?.absolutePath
+                                    recordingDuration = 0L
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                                )
+                            ) {
+                                Icon(imageVector = Icons.Default.Stop, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.stop_recording),
+                                    fontSize = 18.sp
+                                )
+                            }
+
+                            // Cancel button
+                            OutlinedButton(
+                                onClick = {
+                                    audioRecorder.cancelRecording()
+                                    isRecording = false
+                                    recordingDuration = 0L
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    stringResource(R.string.cancel),
+                                    fontSize = 18.sp
+                                )
+                            }
+                        }
+                    } else {
+                        // Show record button
+                        Button(
+                            onClick = {
+                                audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                            )
+                        ) {
+                            Icon(imageVector = Icons.Default.Mic, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.record_audio), fontSize = 18.sp)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Helper text
+            Text(
+                text = when (currentLanguage) {
+                    "hi" -> "आप आवाज़ रिकॉर्ड किए बिना जारी रख सकते हैं"
+                    "gu" -> "તમે અવાજ રેકોર્ડ કર્યા વિના ચાલુ રાખી શકો છો"
+                    else -> "You can continue without recording"
+                },
+                fontSize = 14.sp,
+                color = androidx.compose.ui.graphics.Color.Gray,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Skip Button (full width, prominent)
+            OutlinedButton(
+                onClick = {
+                    audioPlayer.stop()
+                    onSkip()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                border = BorderStroke(2.dp, androidx.compose.ui.graphics.Color(0xFF4A90E2)),
+                contentPadding = PaddingValues(12.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.skip),
+                        fontSize = 24.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        when (currentLanguage) {
+                            "hi" -> "(कोई आवाज़ नहीं)"
+                            "gu" -> "(કોઈ અવાજ નથી)"
+                            else -> "(No audio)"
+                        },
+                        fontSize = 16.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Next Button (only enabled if audio recorded)
+            Button(
+                onClick = {
+                    audioPlayer.stop()
+                    onNext(audioPath)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                ),
+                enabled = audioPath != null,
+                contentPadding = PaddingValues(12.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.next),
+                        fontSize = 24.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                    if (audioPath != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

@@ -82,6 +82,7 @@
     <string name="ive_taken_it">मैंने ले लिया है</string>
     <string name="ive_taken_all">मैंने सभी ले लिया है</string>
     <string name="remind_me_later">10 मिनट में याद दिलाएं</string>
+    <string name="remind_in_minutes">%1$d मिनट में याद दिलाएं</string>
     <string name="snooze_all">सभी को स्नूज़ करें</string>
     <string name="skip_dose">छोड़ें</string>
     <string name="skip_all">सभी छोड़ें</string>

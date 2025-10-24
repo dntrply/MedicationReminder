@@ -210,6 +210,39 @@ fun SetReminderTimesScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            // Progress indicator
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = when (currentLanguage) {
+                        "hi" -> "चरण 3 / 3"
+                        "gu" -> "પગલું 3 / 3"
+                        else -> "Step 3 of 3"
+                    },
+                    fontSize = 16.sp,
+                    color = androidx.compose.ui.graphics.Color.Gray,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Large instruction text
+            Text(
+                text = when (currentLanguage) {
+                    "hi" -> "इसे कब लेना है?"
+                    "gu" -> "તે ક્યારે લેવું?"
+                    else -> "When should you take it?"
+                },
+                fontSize = 28.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Preset time buttons header with customize link
             Row(
                 modifier = Modifier.fillMaxWidth(),

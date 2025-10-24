@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2025-01-24
+
+Patch release with important fixes for timeline display, notification behavior, and small screen support.
+
+### Added
+- **Smart full-screen intent** - App only surfaces automatically when device is locked or screen is off; doesn't interrupt active phone usage
+- **Action field in Debug Data** - History entries now show whether medication was TAKEN, MISSED, or SKIPPED
+
+### Fixed
+- **Timeline green checkmark bug** - Fixed issue where medications with MISSED or SKIPPED history incorrectly showed green checkmark instead of pending status
+- **Medication entry screens scrollability** - Added vertical scrolling to "What is your medication?" and "Add voice instructions?" screens to ensure buttons are visible on small screens (Pixel 3a)
+- **Full-screen notification behavior** - Notifications now intelligently detect device state and only launch app when appropriate (locked/screen off)
+
+### Changed
+- Timeline now correctly distinguishes between TAKEN medications (green checkmark) and other actions (no checkmark)
+- Full-screen intents only trigger when screen is off or device is locked, providing less disruptive notification experience
+
 ## [0.9.0] - 2025-01-24
 
 Beta release with complete MVP features for medication management, history tracking, and overdue medication alerts.

@@ -101,6 +101,17 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Full-screen intent to surface the app
+        val fullScreenIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            context,
+            medicationId.toInt() + 5000,
+            fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         // Intent for "Mark as Taken" action
         val markTakenIntent = Intent(context, ReminderBroadcastReceiver::class.java).apply {
             action = ACTION_MARK_TAKEN
@@ -158,6 +169,11 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             context.getString(R.string.time_to_take, medicationName)
         }
 
+        // Check if device is actively being used (screen on and unlocked)
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val isScreenOn = powerManager.isInteractive
+        val shouldUseFullScreenIntent = !isScreenOn || isLocked
+
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(title)
@@ -169,7 +185,13 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
             .setVibrate(longArrayOf(0, 500, 200, 500))
             .setContentIntent(openAppPendingIntent)
-            .addAction(
+
+        // Only use full-screen intent if screen is off or device is locked
+        if (shouldUseFullScreenIntent) {
+            builder.setFullScreenIntent(fullScreenPendingIntent, true)
+        }
+
+        builder.addAction(
                 R.drawable.ic_check,
                 context.getString(R.string.ive_taken_it),
                 markTakenPendingIntent
@@ -258,6 +280,20 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Full-screen intent to surface the app
+        val fullScreenIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("SHOW_TAKE_MEDICATIONS", true)
+            putExtra("HOUR", hour)
+            putExtra("MINUTE", minute)
+        }
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            context,
+            (hour * 100) + minute + 50000,
+            fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         // Intent for "Mark All as Taken" action
         val markAllTakenIntent = Intent(context, ReminderBroadcastReceiver::class.java).apply {
             action = ACTION_MARK_ALL_TAKEN
@@ -309,6 +345,11 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             context.getString(R.string.time_to_take_multiple, medications.size)
         }
 
+        // Check if device is actively being used (screen on and unlocked)
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        val isScreenOn = powerManager.isInteractive
+        val shouldUseFullScreenIntent = !isScreenOn || isLocked
+
         val groupBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(groupTitle)
@@ -327,6 +368,13 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             .setContentIntent(openAppPendingIntent)
             .setGroup(GROUP_KEY)
             .setGroupSummary(true)
+
+        // Only use full-screen intent if screen is off or device is locked
+        if (shouldUseFullScreenIntent) {
+            groupBuilder.setFullScreenIntent(fullScreenPendingIntent, true)
+        }
+
+        groupBuilder
             .addAction(
                 R.drawable.ic_check,
                 context.getString(R.string.ive_taken_all),

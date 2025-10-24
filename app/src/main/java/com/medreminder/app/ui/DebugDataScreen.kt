@@ -120,7 +120,8 @@ fun DebugDataScreen(
                                             appendLine("      \"medicationName\": \"${h.medicationName}\",")
                                             appendLine("      \"scheduledTime\": ${h.scheduledTime},")
                                             appendLine("      \"takenTime\": ${h.takenTime},")
-                                            appendLine("      \"wasOnTime\": ${h.wasOnTime}")
+                                            appendLine("      \"wasOnTime\": ${h.wasOnTime},")
+                                            appendLine("      \"action\": \"${h.action}\"")
                                             append("    }")
                                             if (index < history.size - 1) appendLine(",")
                                             else appendLine()
@@ -388,6 +389,7 @@ fun HistoryDebugCard(h: MedicationHistory) {
             DataRow("Scheduled", Date(h.scheduledTime).toString())
             DataRow("Taken", Date(h.takenTime).toString())
             DataRow("Was On Time", h.wasOnTime.toString())
+            DataRow("Action", h.action)
             DataRow("Notes", h.notes ?: "null")
         }
     }

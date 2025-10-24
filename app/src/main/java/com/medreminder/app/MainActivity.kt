@@ -1933,7 +1933,8 @@ fun TimelineView(
                                                 takenCal.timeInMillis = history.scheduledTime
                                                 val matches = history.medicationId == slot.medication.id &&
                                                     takenCal.get(java.util.Calendar.HOUR_OF_DAY) == slot.hour &&
-                                                    takenCal.get(java.util.Calendar.MINUTE) == slot.minute
+                                                    takenCal.get(java.util.Calendar.MINUTE) == slot.minute &&
+                                                    history.action == "TAKEN"  // Only count as taken if action is TAKEN
                                                 if (matches) {
                                                     Log.d("Timeline", "Found match for ${slot.medication.name} at ${slot.hour}:${slot.minute}")
                                                 }
@@ -2544,7 +2545,8 @@ fun AddMedicationStep1(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(24.dp),
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Progress indicator
@@ -2919,6 +2921,7 @@ fun AddMedicationStep2(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             // Progress indicator
             Row(

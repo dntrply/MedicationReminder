@@ -50,4 +50,7 @@ interface MedicationHistoryDao {
 
     @Query("DELETE FROM medication_history WHERE medicationId = :medicationId")
     suspend fun deleteHistoryForMedication(medicationId: Long)
+
+    @Query("DELETE FROM medication_history")
+    suspend fun deleteAllHistory()
 }

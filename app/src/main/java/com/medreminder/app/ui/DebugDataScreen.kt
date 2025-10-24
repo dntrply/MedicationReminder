@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,6 +48,17 @@ fun DebugDataScreen(
     var pendingMeds by remember { mutableStateOf<List<PendingMedicationTracker.PendingMedication>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
+    var showDeleteHistoryDialog by remember { mutableStateOf(false) }
+
+    // Get app version
+    val appVersion = remember {
+        try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            "${packageInfo.versionName} (${packageInfo.versionCode})"
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
 
     // Preferences (DataStore)
     val currentLanguage by SettingsStore.languageFlow(context).collectAsState(initial = "en")
@@ -79,7 +91,16 @@ fun DebugDataScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Debug Data Viewer") },
+                title = {
+                    Column {
+                        Text("Debug Data Viewer")
+                        Text(
+                            "v$appVersion",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -235,11 +256,36 @@ fun DebugDataScreen(
                 // History (collapsible)
                 item { Spacer(modifier = Modifier.height(8.dp)) }
                 item {
-                    CollapsibleSectionHeader(
-                        title = "MEDICATION HISTORY (${history.size})",
-                        expanded = historyExpanded,
-                        onToggle = { historyExpanded = !historyExpanded }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "MEDICATION HISTORY (${history.size})",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (history.isNotEmpty()) {
+                            IconButton(
+                                onClick = { showDeleteHistoryDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete all history",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        IconButton(onClick = { historyExpanded = !historyExpanded }) {
+                            Icon(
+                                imageVector = if (historyExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (historyExpanded) "Collapse" else "Expand"
+                            )
+                        }
+                    }
                 }
                 if (historyExpanded) {
                     if (history.isEmpty()) {
@@ -318,16 +364,55 @@ fun DebugDataScreen(
             }
         }
     }
+
+    // Delete history confirmation dialog
+    if (showDeleteHistoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteHistoryDialog = false },
+            title = { Text("Delete All History?") },
+            text = { Text("This will permanently delete all ${history.size} history entries. This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                try {
+                                    val db = MedicationDatabase.getDatabase(context)
+                                    db.historyDao().deleteAllHistory()
+                                    exportMessage = "Deleted ${history.size} history entries"
+                                }  catch (e: Exception) {
+                                    exportMessage = "Error deleting history: ${e.message}"
+                                }
+                            }
+                            showDeleteHistoryDialog = false
+                            loadData() // Reload data
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteHistoryDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun CollapsibleSectionHeader(
     title: String,
     expanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onToggle() }
             .padding(vertical = 8.dp),

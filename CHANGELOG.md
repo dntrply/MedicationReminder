@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2025-01-24
+
+Patch release enhancing Debug Data screen with version display and history management.
+
+### Added
+- **Version display in Debug Data** - App version (name and code) now shown in Debug Data screen title
+- **Delete all history button** - Red delete icon in Debug Data allows clearing all medication history with confirmation dialog
+- `deleteAllHistory()` function in MedicationHistoryDao for bulk history deletion
+
+### Changed
+- Improved Debug Data layout: Delete button positioned between section title and expand/collapse arrow
+- All expand/collapse arrows consistently positioned on extreme right for better UX
+
+### Technical
+- Updated app version: versionCode = 3, versionName = "0.9.2"
+
 ## [0.9.1] - 2025-01-24
 
 Patch release with important fixes for timeline display, notification behavior, and small screen support.

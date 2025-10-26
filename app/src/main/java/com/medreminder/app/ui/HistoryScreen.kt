@@ -47,8 +47,13 @@ fun HistoryScreen(
     // State for number of days to show
     var daysToShow by remember { mutableStateOf(3) }
 
-    // Get medications for photo/name lookup
-    val medications by medicationDao.getAllMedications().collectAsState(initial = emptyList())
+    // Get active profile ID
+    val activeProfileId by com.medreminder.app.data.SettingsStore.activeProfileIdFlow(context)
+        .collectAsState(initial = null)
+
+    // Get medications for photo/name lookup - filtered by active profile
+    val medications by medicationDao.getMedicationsByProfile(activeProfileId ?: 1L)
+        .collectAsState(initial = emptyList())
 
     // Calculate date range
     val dateRange = remember(daysToShow) {
@@ -68,8 +73,9 @@ fun HistoryScreen(
         startCal.timeInMillis to endCal.timeInMillis
     }
 
-    // Get history for date range - show only explicit database entries
-    val historyList by historyDao.getHistoryForDateRange(
+    // Get history for date range - filtered by active profile
+    val historyList by historyDao.getHistoryForDateRangeByProfile(
+        profileId = activeProfileId ?: 1L,
         startTime = dateRange.first,
         endTime = dateRange.second
     ).collectAsState(initial = emptyList())

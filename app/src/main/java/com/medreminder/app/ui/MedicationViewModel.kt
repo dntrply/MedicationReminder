@@ -5,16 +5,27 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.medreminder.app.data.Medication
 import com.medreminder.app.data.MedicationDatabase
+import com.medreminder.app.data.SettingsStore
 import com.medreminder.app.notifications.NotificationScheduler
 import com.medreminder.app.notifications.PendingMedicationTracker
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class MedicationViewModel(application: Application) : AndroidViewModel(application) {
     private val medicationDao = MedicationDatabase.getDatabase(application).medicationDao()
     private val context = application.applicationContext
 
-    val medications: Flow<List<Medication>> = medicationDao.getAllMedications()
+    // Get active profile ID from settings
+    private val activeProfileId: Flow<Long?> = SettingsStore.activeProfileIdFlow(context)
+
+    // Filter medications by active profile
+    val medications: Flow<List<Medication>> = activeProfileId.flatMapLatest { profileId ->
+        if (profileId != null) {
+            medicationDao.getMedicationsByProfile(profileId)
+        } else {
+            flowOf(emptyList())
+        }
+    }
 
     fun addMedication(medication: Medication) {
         viewModelScope.launch {
@@ -78,5 +89,9 @@ class MedicationViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             medicationDao.deleteMedicationById(id)
         }
+    }
+
+    suspend fun getActiveProfileId(): Long {
+        return SettingsStore.activeProfileIdFlow(context).first() ?: 1L
     }
 }

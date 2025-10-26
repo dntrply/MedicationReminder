@@ -35,6 +35,7 @@ object PendingMedicationTracker {
         val medicationId: Long,
         val medicationName: String,
         val medicationPhotoUri: String?,
+        val profileId: Long,
         val hour: Int,
         val minute: Int,
         val timestamp: Long = System.currentTimeMillis(),
@@ -69,6 +70,7 @@ object PendingMedicationTracker {
                 put("medicationId", med.medicationId)
                 put("medicationName", med.medicationName)
                 put("medicationPhotoUri", med.medicationPhotoUri ?: "")
+                put("profileId", med.profileId)
                 put("hour", med.hour)
                 put("minute", med.minute)
                 put("timestamp", med.timestamp)
@@ -99,6 +101,7 @@ object PendingMedicationTracker {
                 put("medicationId", med.medicationId)
                 put("medicationName", med.medicationName)
                 put("medicationPhotoUri", med.medicationPhotoUri ?: "")
+                put("profileId", med.profileId)
                 put("hour", med.hour)
                 put("minute", med.minute)
                 put("timestamp", med.timestamp)
@@ -129,6 +132,7 @@ object PendingMedicationTracker {
                 put("medicationId", med.medicationId)
                 put("medicationName", med.medicationName)
                 put("medicationPhotoUri", med.medicationPhotoUri ?: "")
+                put("profileId", med.profileId)
                 put("hour", med.hour)
                 put("minute", med.minute)
                 put("timestamp", med.timestamp)
@@ -143,6 +147,38 @@ object PendingMedicationTracker {
             }
         }
         Log.d(TAG, "Removed all pending medications at $hour:$minute, remaining: ${pending.size}")
+    }
+
+    /**
+     * Remove all pending medications for a specific profile
+     * Used when deleting a profile
+     */
+    fun removePendingMedicationsForProfile(context: Context, profileId: Long) {
+        val pending = getPendingMedications(context).toMutableList()
+
+        pending.removeAll { it.profileId == profileId }
+
+        val jsonArray = JSONArray()
+        pending.forEach { med ->
+            val jsonObj = JSONObject().apply {
+                put("medicationId", med.medicationId)
+                put("medicationName", med.medicationName)
+                put("medicationPhotoUri", med.medicationPhotoUri ?: "")
+                put("profileId", med.profileId)
+                put("hour", med.hour)
+                put("minute", med.minute)
+                put("timestamp", med.timestamp)
+                put("repeatCount", med.repeatCount)
+            }
+            jsonArray.put(jsonObj)
+        }
+
+        runBlocking {
+            context.userPrefs.edit { prefs ->
+                prefs[KEY_PENDING] = jsonArray.toString()
+            }
+        }
+        Log.d(TAG, "Removed all pending medications for profile ID: $profileId, remaining: ${pending.size}")
     }
 
     /**
@@ -171,6 +207,7 @@ object PendingMedicationTracker {
                     medicationId = jsonObj.getLong("medicationId"),
                     medicationName = jsonObj.getString("medicationName"),
                     medicationPhotoUri = jsonObj.getString("medicationPhotoUri").takeIf { it.isNotEmpty() },
+                    profileId = jsonObj.optLong("profileId", 1L), // Default to 1 for backward compatibility
                     hour = jsonObj.getInt("hour"),
                     minute = jsonObj.getInt("minute"),
                     timestamp = jsonObj.getLong("timestamp"),
@@ -304,6 +341,7 @@ object PendingMedicationTracker {
                             medicationId = medication.id,
                             medicationName = medication.name,
                             medicationPhotoUri = medication.photoUri,
+                            profileId = medication.profileId,
                             hour = hour,
                             minute = minute,
                             timestamp = scheduledTime
@@ -329,6 +367,7 @@ object PendingMedicationTracker {
                 scheduledCal.set(java.util.Calendar.MILLISECOND, 0)
 
                 val history = com.medreminder.app.data.MedicationHistory(
+                    profileId = med.profileId,
                     medicationId = med.medicationId,
                     medicationName = med.medicationName,
                     scheduledTime = scheduledCal.timeInMillis,
@@ -356,9 +395,11 @@ object PendingMedicationTracker {
                     put("medicationId", med.medicationId)
                     put("medicationName", med.medicationName)
                     put("medicationPhotoUri", med.medicationPhotoUri ?: "")
+                    put("profileId", med.profileId)
                     put("hour", med.hour)
                     put("minute", med.minute)
                     put("timestamp", med.timestamp)
+                    put("repeatCount", med.repeatCount)
                 }
                 jsonArray.put(jsonObj)
             }

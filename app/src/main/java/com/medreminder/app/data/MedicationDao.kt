@@ -8,8 +8,14 @@ interface MedicationDao {
     @Query("SELECT * FROM medications ORDER BY createdAt DESC")
     fun getAllMedications(): Flow<List<Medication>>
 
+    @Query("SELECT * FROM medications WHERE profileId = :profileId ORDER BY createdAt DESC")
+    fun getMedicationsByProfile(profileId: Long): Flow<List<Medication>>
+
     @Query("SELECT * FROM medications ORDER BY createdAt DESC")
     fun getAllMedicationsSync(): List<Medication>
+
+    @Query("SELECT * FROM medications WHERE profileId = :profileId ORDER BY createdAt DESC")
+    fun getMedicationsByProfileSync(profileId: Long): List<Medication>
 
     @Query("SELECT * FROM medications WHERE id = :id")
     suspend fun getMedicationById(id: Long): Medication?
@@ -25,4 +31,7 @@ interface MedicationDao {
 
     @Query("DELETE FROM medications WHERE id = :id")
     suspend fun deleteMedicationById(id: Long)
+
+    @Query("DELETE FROM medications WHERE profileId = :profileId")
+    suspend fun deleteMedicationsByProfile(profileId: Long)
 }

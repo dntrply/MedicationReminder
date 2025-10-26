@@ -24,10 +24,12 @@ import androidx.compose.ui.unit.sp
 import com.medreminder.app.data.Medication
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.MedicationHistory
+import com.medreminder.app.data.Profile
 import com.medreminder.app.notifications.PendingMedicationTracker
 import com.medreminder.app.data.SettingsStore
 import com.medreminder.app.data.PresetTimes
 import com.medreminder.app.data.PresetTimesManager
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -43,9 +45,11 @@ fun DebugDataScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var profiles by remember { mutableStateOf<List<Profile>>(emptyList()) }
     var medications by remember { mutableStateOf<List<Medication>>(emptyList()) }
     var history by remember { mutableStateOf<List<MedicationHistory>>(emptyList()) }
     var pendingMeds by remember { mutableStateOf<List<PendingMedicationTracker.PendingMedication>>(emptyList()) }
+    var activeProfileId by remember { mutableStateOf<Long?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteHistoryDialog by remember { mutableStateOf(false) }
@@ -66,6 +70,7 @@ fun DebugDataScreen(
     val repeatMinutes by SettingsStore.repeatIntervalFlow(context).collectAsState(initial = 10)
 
     // Collapsible section state
+    var profilesExpanded by remember { mutableStateOf(true) }
     var prefsExpanded by remember { mutableStateOf(true) }
     var medsExpanded by remember { mutableStateOf(true) }
     var historyExpanded by remember { mutableStateOf(true) }
@@ -76,6 +81,8 @@ fun DebugDataScreen(
         scope.launch {
             withContext(Dispatchers.IO) {
                 val db = MedicationDatabase.getDatabase(context)
+                profiles = db.profileDao().getAllProfiles().first()
+                activeProfileId = SettingsStore.activeProfileIdFlow(context).first()
                 medications = db.medicationDao().getAllMedicationsSync()
                 history = db.historyDao().getAllHistorySync()
                 pendingMeds = PendingMedicationTracker.getPendingMedications(context)
@@ -223,6 +230,32 @@ fun DebugDataScreen(
                     } else {
                         items(pendingMeds) { p ->
                             PendingMedDebugCard(p)
+                        }
+                    }
+                }
+
+                // Profiles (collapsible)
+                item {
+                    CollapsibleSectionHeader(
+                        title = "PROFILES (${profiles.size})",
+                        expanded = profilesExpanded,
+                        onToggle = { profilesExpanded = !profilesExpanded }
+                    )
+                }
+                if (profilesExpanded) {
+                    if (profiles.isEmpty()) {
+                        item {
+                            Card {
+                                Text(
+                                    "No profiles in database",
+                                    modifier = Modifier.padding(16.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        items(profiles) { profile ->
+                            ProfileDebugCard(profile, profile.id == activeProfileId)
                         }
                     }
                 }
@@ -433,6 +466,29 @@ fun CollapsibleSectionHeader(
 }
 
 @Composable
+fun ProfileDebugCard(profile: Profile, isActive: Boolean) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            DataRow("ID", profile.id.toString())
+            DataRow("Name", profile.name + if (isActive) " (ACTIVE)" else "")
+            DataRow("Photo URI", profile.photoUri ?: "null")
+            DataRow("Notification Sound", profile.notificationSoundUri ?: "null")
+            DataRow("Message Template", profile.notificationMessageTemplate ?: Profile.DEFAULT_MESSAGE_TEMPLATE)
+            DataRow("Is Default", profile.isDefault.toString())
+            DataRow("Created At", Date(profile.createdAt).toString())
+        }
+    }
+}
+
+@Composable
 fun MedicationDebugCard(med: Medication) {
     Card(
         colors = CardDefaults.cardColors(
@@ -441,6 +497,7 @@ fun MedicationDebugCard(med: Medication) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             DataRow("ID", med.id.toString())
+            DataRow("Profile ID", med.profileId.toString())
             DataRow("Name", med.name)
             DataRow("Photo URI", med.photoUri ?: "null")
             DataRow("Audio Path", med.audioNotePath ?: "null")
@@ -469,6 +526,7 @@ fun HistoryDebugCard(h: MedicationHistory) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             DataRow("ID", h.id.toString())
+            DataRow("Profile ID", h.profileId.toString())
             DataRow("Medication ID", h.medicationId.toString())
             DataRow("Name", h.medicationName)
             DataRow("Scheduled", Date(h.scheduledTime).toString())
@@ -489,6 +547,7 @@ fun PendingMedDebugCard(p: PendingMedicationTracker.PendingMedication) {
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             DataRow("Medication ID", p.medicationId.toString())
+            DataRow("Profile ID", p.profileId.toString())
             DataRow("Name", p.medicationName)
             DataRow("Time", "${p.hour}:${String.format("%02d", p.minute)}")
             DataRow("Timestamp", Date(p.timestamp).toString())

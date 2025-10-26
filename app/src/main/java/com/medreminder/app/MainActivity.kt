@@ -55,8 +55,11 @@ import com.medreminder.app.data.ReminderTime
 import com.medreminder.app.notifications.NotificationScheduler
 import com.medreminder.app.notifications.PendingMedicationTracker
 import com.medreminder.app.ui.MedicationViewModel
+import com.medreminder.app.ui.ProfileViewModel
 import com.medreminder.app.ui.SetReminderTimesScreen
 import com.medreminder.app.ui.SettingsScreen
+import com.medreminder.app.ui.components.PhotoPickerDialog
+import com.medreminder.app.ui.components.rememberPhotoPickerState
 import com.medreminder.app.ui.theme.MedicationReminderTheme
 import java.io.File
 import java.text.SimpleDateFormat
@@ -184,6 +187,9 @@ class MainActivity : ComponentActivity() {
                         onOpenSettings = {
                             currentScreen = "settings"
                         },
+                        onManageProfiles = {
+                            currentScreen = "profiles"
+                        },
                         onViewHistory = {
                             currentScreen = "history"
                         }
@@ -214,7 +220,9 @@ class MainActivity : ComponentActivity() {
                             // Ensure draft exists/updates immediately when moving to time selection
                             lifecycleScope.launch(Dispatchers.IO) {
                                 if (draftMedicationId == null) {
+                                    val activeProfileId = viewModel.getActiveProfileId()
                                     val draft = Medication(
+                                        profileId = activeProfileId,
                                         name = name,
                                         photoUri = photoUri,
                                         audioNotePath = audioPath,
@@ -226,8 +234,10 @@ class MainActivity : ComponentActivity() {
                                         draftMedication = draft.copy(id = newId)
                                     }
                                 } else {
+                                    val activeProfileId = viewModel.getActiveProfileId()
                                     val updated = (draftMedication ?: Medication(
                                         id = draftMedicationId!!,
+                                        profileId = activeProfileId,
                                         name = name,
                                         photoUri = photoUri,
                                         audioNotePath = audioPath
@@ -248,7 +258,9 @@ class MainActivity : ComponentActivity() {
                             // Create or update draft medication record
                             lifecycleScope.launch(Dispatchers.IO) {
                                 if (draftMedicationId == null) {
+                                    val activeProfileId = viewModel.getActiveProfileId()
                                     val draft = Medication(
+                                        profileId = activeProfileId,
                                         name = name,
                                         photoUri = photoUri,
                                         audioNotePath = audioPath,
@@ -260,8 +272,10 @@ class MainActivity : ComponentActivity() {
                                         draftMedication = draft.copy(id = newId)
                                     }
                                 } else {
+                                    val activeProfileId = viewModel.getActiveProfileId()
                                     val updated = (draftMedication ?: Medication(
                                         id = draftMedicationId!!,
+                                        profileId = activeProfileId,
                                         name = name,
                                         photoUri = photoUri,
                                         audioNotePath = audioPath
@@ -325,7 +339,9 @@ class MainActivity : ComponentActivity() {
                                 lifecycleScope.launch(Dispatchers.IO) {
                                     if (draftMedicationId == null) {
                                         // Edge case: if no draft yet, create one now then proceed
+                                        val activeProfileId = viewModel.getActiveProfileId()
                                         val draft = Medication(
+                                            profileId = activeProfileId,
                                             name = tempData.name,
                                             photoUri = tempData.photoUri,
                                             audioNotePath = tempData.audioPath,
@@ -340,8 +356,10 @@ class MainActivity : ComponentActivity() {
                                         }
                                         NotificationScheduler.scheduleMedicationNotifications(this@MainActivity, created)
                                     } else {
+                                        val activeProfileId = viewModel.getActiveProfileId()
                                         val updated = (draftMedication ?: Medication(
                                             id = draftMedicationId!!,
+                                            profileId = activeProfileId,
                                             name = tempData.name,
                                             photoUri = tempData.photoUri,
                                             audioNotePath = tempData.audioPath
@@ -438,6 +456,11 @@ class MainActivity : ComponentActivity() {
                             onBack = { currentScreen = "home" }
                         )
                     }
+                    "profiles" -> {
+                        com.medreminder.app.ui.ProfileManagementScreen(
+                            onBack = { currentScreen = "home" }
+                        )
+                    }
                 }
             }
         }
@@ -486,6 +509,7 @@ fun HomeScreen(
     onEditMedication: (Medication) -> Unit = {},
     onDebugData: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    onManageProfiles: () -> Unit = {},
     onViewHistory: () -> Unit = {}
 ) {
     val medications by viewModel.medications.collectAsState(initial = emptyList())
@@ -494,6 +518,17 @@ fun HomeScreen(
     var showTimelineView by remember { mutableStateOf(true) } // Default to Timeline view
     var timelineViewCounter by remember { mutableStateOf(0) }
     val context = LocalContext.current
+
+    // Get active profile for display
+    val profileViewModel: ProfileViewModel = viewModel()
+    val activeProfile by profileViewModel.activeProfile.collectAsState()
+    val profiles by profileViewModel.profiles.collectAsState(initial = emptyList())
+
+    // Debug logging
+    android.util.Log.d("HomeScreen", "Active profile: ${activeProfile?.name ?: "null"}")
+
+    // State for profile switcher dropdown
+    var showProfileMenu by remember { mutableStateOf(false) }
 
     // State for collapsible lower section
     var isLowerSectionExpanded by remember { mutableStateOf(true) }
@@ -554,6 +589,123 @@ fun HomeScreen(
         },
         topBar = {
             CenterAlignedTopAppBar(
+                navigationIcon = {
+                    // Profile indicator in top bar
+                    val profile = activeProfile
+                    if (profile != null) {
+                        Box {
+                            IconButton(onClick = {
+                                android.util.Log.d("ProfileMenu", "Opening profile menu")
+                                showProfileMenu = true
+                            }) {
+                                if (profile.photoUri != null) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(Uri.parse(profile.photoUri)),
+                                        contentDescription = "Profile: ${profile.name}",
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .border(2.dp, androidx.compose.ui.graphics.Color.White, CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(androidx.compose.ui.graphics.Color.White),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = profile.name.take(1).uppercase(),
+                                            color = androidx.compose.ui.graphics.Color(0xFF4A90E2),
+                                            fontSize = 16.sp,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Profile switcher dropdown - anchored to the button
+                            DropdownMenu(
+                                expanded = showProfileMenu,
+                                onDismissRequest = { showProfileMenu = false }
+                            ) {
+                                android.util.Log.d("ProfileMenu", "DropdownMenu content composing, profiles count: ${profiles.size}")
+                                // List all profiles
+                                profiles.forEach { profileItem ->
+                                    val isActive = profileItem.id == activeProfile?.id
+                                    DropdownMenuItem(
+                                        leadingIcon = {
+                                            // Profile icon
+                                            if (profileItem.photoUri != null) {
+                                                Image(
+                                                    painter = rememberAsyncImagePainter(Uri.parse(profileItem.photoUri)),
+                                                    contentDescription = null,
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .clip(CircleShape),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .clip(CircleShape)
+                                                        .background(androidx.compose.ui.graphics.Color(0xFF4A90E2)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = profileItem.name.take(1).uppercase(),
+                                                        color = androidx.compose.ui.graphics.Color.White,
+                                                        fontSize = 14.sp,
+                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        text = {
+                                            Text(text = profileItem.name)
+                                        },
+                                        trailingIcon = {
+                                            if (isActive) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Active",
+                                                    tint = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            profileViewModel.switchProfile(profileItem.id)
+                                            showProfileMenu = false
+                                        }
+                                    )
+                                }
+
+                                // Divider
+                                Divider()
+
+                                // Manage Profiles option
+                                DropdownMenuItem(
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Settings,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    text = {
+                                        Text("Manage Profiles...")
+                                    },
+                                    onClick = {
+                                        showProfileMenu = false
+                                        onManageProfiles()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                },
                 title = {
                     Text(
                         stringResource(R.string.home_title),
@@ -590,6 +742,22 @@ fun HomeScreen(
                             onClick = {
                                 showMenu = false
                                 onOpenSettings()
+                            }
+                        )
+                        Divider()
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Person, contentDescription = null)
+                                    Text("Profiles", fontSize = 18.sp)
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                onManageProfiles()
                             }
                         )
                         Divider()
@@ -640,9 +808,9 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                 // Large visual icon
                 Box(
                     modifier = Modifier
@@ -987,11 +1155,12 @@ fun HomeScreen(
                 }
             }
         }
+    }
 
-        // Language selection dialog removed; language changes live under Settings
+    // Language selection dialog removed; language changes live under Settings
 
-        // Exit confirmation dialog
-        if (showExitDialog) {
+    // Exit confirmation dialog
+    if (showExitDialog) {
             AlertDialog(
                 onDismissRequest = { showExitDialog = false },
                 icon = {
@@ -1064,7 +1233,6 @@ fun HomeScreen(
                     }
                 }
             )
-        }
     }
 }
 
@@ -2454,65 +2622,24 @@ fun AddMedicationStep1(
     onNext: (String, String?) -> Unit // name, photoUri
 ) {
     var medicationName by remember { mutableStateOf(initialName) }
-    var showPhotoOptions by remember { mutableStateOf(false) }
     var selectedImageUri by remember {
         mutableStateOf<Uri?>(initialPhotoUri?.let { Uri.parse(it) })
     }
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
 
     val context = LocalContext.current
 
-    // Create a temporary file for camera photos
-    fun createImageFile(): Uri {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val imageFileName = "MEDICATION_$timeStamp"
-        val storageDir = File(context.getExternalFilesDir(null), "Pictures")
-        storageDir.mkdirs()
-
-        val imageFile = File(storageDir, "$imageFileName.jpg")
-        return FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            imageFile
-        )
+    // Photo picker state
+    val photoPickerState = rememberPhotoPickerState(
+        initialUri = selectedImageUri
+    ) { uri ->
+        selectedImageUri = uri
     }
 
-    // Camera launcher
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) {
-            selectedImageUri = cameraImageUri
-        }
-    }
-
-    // Gallery launcher
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            selectedImageUri = it
-        }
-    }
-
-    // Camera permission launcher
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            cameraImageUri = createImageFile()
-            cameraLauncher.launch(cameraImageUri!!)
-        }
-    }
-
-    // Gallery permission launcher (for Android 13+)
-    val galleryPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
-            galleryLauncher.launch("image/*")
-        }
-    }
+    // Photo picker dialog
+    PhotoPickerDialog(
+        state = photoPickerState,
+        title = "Add Medication Photo"
+    )
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.White,
@@ -2588,7 +2715,7 @@ fun AddMedicationStep1(
                     containerColor = androidx.compose.ui.graphics.Color(0xFFF5F5F5)
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                onClick = { showPhotoOptions = true }
+                onClick = { photoPickerState.showDialog(true) }
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -2719,111 +2846,6 @@ fun AddMedicationStep1(
             }
         }
 
-        // Photo options bottom sheet
-        if (showPhotoOptions) {
-            AlertDialog(
-                onDismissRequest = { showPhotoOptions = false },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.CameraAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                },
-                title = {
-                    Text(
-                        text = stringResource(R.string.photo),
-                        fontSize = 24.sp,
-                        textAlign = TextAlign.Center
-                    )
-                },
-                text = {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Take Photo button
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(70.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                            ),
-                            onClick = {
-                                showPhotoOptions = false
-                                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
-                            }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 20.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(32.dp),
-                                    tint = androidx.compose.ui.graphics.Color.White
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = stringResource(R.string.take_photo),
-                                    fontSize = 20.sp,
-                                    color = androidx.compose.ui.graphics.Color.White
-                                )
-                            }
-                        }
-
-                        // Choose from Gallery button
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(70.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                            ),
-                            onClick = {
-                                showPhotoOptions = false
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                    galleryPermissionLauncher.launch(android.Manifest.permission.READ_MEDIA_IMAGES)
-                                } else {
-                                    galleryLauncher.launch("image/*")
-                                }
-                            }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 20.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Photo,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(32.dp),
-                                    tint = androidx.compose.ui.graphics.Color.White
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = stringResource(R.string.choose_from_gallery),
-                                    fontSize = 20.sp,
-                                    color = androidx.compose.ui.graphics.Color.White
-                                )
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { showPhotoOptions = false }) {
-                        Text(stringResource(R.string.cancel), fontSize = 18.sp)
-                    }
-                }
-            )
-        }
     }
 }
 
@@ -3215,6 +3237,88 @@ fun AddMedicationStep2(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Profile indicator that shows the currently active profile
+ */
+@Composable
+fun ProfileIndicator(
+    profile: com.medreminder.app.data.Profile?,
+    onProfileClick: () -> Unit
+) {
+    android.util.Log.d("ProfileIndicator", "ProfileIndicator called with profile: ${profile?.name ?: "null"}")
+    if (profile != null) {
+        android.util.Log.d("ProfileIndicator", "Rendering profile indicator for: ${profile.name}")
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onProfileClick),
+            color = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Profile image or icon
+                if (profile.photoUri != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(Uri.parse(profile.photoUri)),
+                        contentDescription = "Profile photo",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, androidx.compose.ui.graphics.Color(0xFF4A90E2), CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Default profile icon
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(androidx.compose.ui.graphics.Color(0xFF4A90E2)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = profile.name.take(1).uppercase(),
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Profile name
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = profile.name,
+                        fontSize = 16.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = androidx.compose.ui.graphics.Color.Black
+                    )
+                    Text(
+                        text = "Active Profile",
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray
+                    )
+                }
+
+                // Icon to indicate clickable
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Change profile",
+                    tint = androidx.compose.ui.graphics.Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

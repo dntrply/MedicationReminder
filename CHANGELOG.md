@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2025-01-26
+
+Minor release adding multi-profile support with profile-specific medication management, notifications, and history.
+
+### Added
+- **Multi-profile support** - Create and manage multiple user profiles for shared devices
+- **Profile management screen** - Add, edit, and delete profiles with photos and custom notification messages
+- **Profile switcher in top bar** - Quick profile switching via dropdown menu with profile photos
+- **Profile-specific notifications** - Custom notification message templates with {profileName} and {medicationName} placeholders
+- **Profile photos** - Add profile pictures via camera or gallery with circular display
+- **Profile-aware history** - History screen now filters by active profile
+- **Common photo picker component** - Reusable PhotoPicker for both profiles and medications
+- New database entities: Profile, ProfileDao
+- Profile-aware database queries for medications and history
+- FileProvider support for internal files (camera photos)
+
+### Changed
+- Database migration to version 6 with Profile table
+- Medications now linked to profiles via profileId foreign key
+- History records now track profileId for filtering
+- Active profile stored in SettingsStore using DataStore
+- Debug Data screen shows all profiles and cross-profile data (unchanged behavior)
+- Home screen displays active profile indicator in top bar
+- Notification system uses profile-specific message templates
+
+### Fixed
+- FileProvider configuration to support temp camera files in internal storage
+- Photo picker state management issue causing dialog not to appear
+- Profile context honored throughout the app
+
+### Technical
+- Updated app version: versionCode = 4, versionName = "0.10.0"
+- Database schema version 6 with migration from v5
+- Added `files-path` to FileProvider for temp image support
+
 ## [0.9.2] - 2025-01-24
 
 Patch release enhancing Debug Data screen with version display and history management.

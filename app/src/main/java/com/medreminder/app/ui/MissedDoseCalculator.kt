@@ -72,6 +72,7 @@ object MissedDoseCalculator {
                         missedDoses.add(
                             MedicationHistory(
                                 id = 0, // Virtual entry, not persisted
+                                profileId = medication.profileId,
                                 medicationId = medication.id,
                                 medicationName = medication.name,
                                 scheduledTime = scheduledTimestamp,

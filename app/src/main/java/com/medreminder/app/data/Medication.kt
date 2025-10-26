@@ -1,12 +1,17 @@
 package com.medreminder.app.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "medications")
+@Entity(
+    tableName = "medications",
+    indices = [Index(value = ["profileId"])]
+)
 data class Medication(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val profileId: Long, // Foreign key to Profile
     val name: String,
     val photoUri: String? = null,
     val audioNotePath: String? = null, // Path to audio instruction file

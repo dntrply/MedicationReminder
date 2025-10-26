@@ -17,6 +17,7 @@ import com.medreminder.app.MainActivity
 import com.medreminder.app.R
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.MedicationHistory
+import com.medreminder.app.data.Profile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -69,11 +70,21 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         createNotificationChannels(context)
 
+        // Get medication and profile from database
+        val (medication, profile) = runBlocking {
+            val db = MedicationDatabase.getDatabase(context)
+            val med = db.medicationDao().getMedicationById(medicationId)
+            val prof = med?.let { db.profileDao().getProfileById(it.profileId) }
+            Pair(med, prof)
+        }
+        val profileId = medication?.profileId ?: 1L // Default to 1 if not found
+
         // Add this medication to pending tracker (include repeatCount)
         PendingMedicationTracker.addPendingMedication(
             context,
             PendingMedicationTracker.PendingMedication(
-                medicationId, medicationName, medicationPhotoUri, hour, minute,
+                medicationId, medicationName, medicationPhotoUri, profileId,
+                hour, minute,
                 repeatCount = repeatCount
             )
         )
@@ -163,21 +174,32 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         // Build the notification
         val km = context.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
         val isLocked = km.isKeyguardLocked
-        val title = if (!showFull && isLocked) {
-            context.getString(R.string.medication_reminder)
-        } else {
-            context.getString(R.string.time_to_take, medicationName)
-        }
 
         // Check if device is actively being used (screen on and unlocked)
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
         val isScreenOn = powerManager.isInteractive
         val shouldUseFullScreenIntent = !isScreenOn || isLocked
 
+        // Generate notification message using profile's template
+        val notificationMessage = profile?.let {
+            Profile.renderNotificationMessage(
+                it.notificationMessageTemplate,
+                it.name,
+                medicationName
+            )
+        } ?: context.getString(R.string.time_to_take, medicationName)
+
+        // For locked screen without full detail, use generic title
+        val title = if (!showFull && isLocked) {
+            context.getString(R.string.medication_reminder)
+        } else {
+            notificationMessage
+        }
+
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_medication)
             .setContentTitle(title)
-            .setContentText(formatTime(hour, minute))
+            .setContentText("Due at ${formatTime(hour, minute)}")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(false)  // Don't auto-dismiss when tapped
@@ -458,6 +480,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             try {
                 val database = MedicationDatabase.getDatabase(context)
                 val historyDao = database.historyDao()
+                val medicationDao = database.medicationDao()
 
                 // Create scheduled time (the original reminder time)
                 val scheduledCalendar = java.util.Calendar.getInstance().apply {
@@ -475,7 +498,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 val timeDiffMinutes = Math.abs(takenTime - scheduledTime) / (1000 * 60)
                 val wasOnTime = timeDiffMinutes <= 30
 
+                // Get medication to get profileId
+                val med = medicationDao.getMedicationById(medicationId)
+                val profId = med?.profileId ?: 1L
+
                 val history = MedicationHistory(
+                    profileId = profId,
                     medicationId = medicationId,
                     medicationName = medicationName,
                     scheduledTime = scheduledTime,
@@ -569,6 +597,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             try {
                 val database = MedicationDatabase.getDatabase(context)
                 val historyDao = database.historyDao()
+                val medicationDao = database.medicationDao()
 
                 // Create scheduled time
                 val scheduledCalendar = java.util.Calendar.getInstance().apply {
@@ -578,7 +607,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                     set(java.util.Calendar.MILLISECOND, 0)
                 }
 
+                // Get medication to get profileId
+                val med = medicationDao.getMedicationById(medicationId)
+                val profId = med?.profileId ?: 1L
+
                 val history = MedicationHistory(
+                    profileId = profId,
                     medicationId = medicationId,
                     medicationName = medicationName,
                     scheduledTime = scheduledCalendar.timeInMillis,

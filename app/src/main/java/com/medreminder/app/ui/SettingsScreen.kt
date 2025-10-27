@@ -14,9 +14,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.medreminder.app.R
 import com.medreminder.app.data.PresetTimes
 import com.medreminder.app.data.PresetTimesManager
 import com.medreminder.app.data.SettingsStore
@@ -48,11 +50,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = when (currentLanguage) {
-                            "hi" -> "सेटिंग्स"
-                            "gu" -> "સેટિંગ્સ"
-                            else -> "Settings"
-                        },
+                        text = stringResource(R.string.settings),
                         color = androidx.compose.ui.graphics.Color.White
                     )
                 },
@@ -83,11 +81,7 @@ fun SettingsScreen(
         ) {
             // Language section
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "भाषा"
-                    "gu" -> "ભાષા"
-                    else -> "Language"
-                },
+                text = stringResource(R.string.language_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
@@ -109,6 +103,11 @@ fun SettingsScreen(
                     selected = currentLanguage == "gu",
                     onClick = { onLanguageChange("gu") }
                 )
+                LanguageOptionCard(
+                    label = "मराठी",
+                    selected = currentLanguage == "mr",
+                    onClick = { onLanguageChange("mr") }
+                )
             }
 
             Divider(Modifier.padding(vertical = 8.dp))
@@ -123,11 +122,7 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = when (currentLanguage) {
-                        "hi" -> "समय प्रीसेट"
-                        "gu" -> "સમય પ્રીસેટ"
-                        else -> "Preset Times"
-                    },
+                    text = stringResource(R.string.preset_times),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
@@ -142,11 +137,7 @@ fun SettingsScreen(
             if (presetsExpanded) {
                 // Reuse the existing TimePresetRow from SetReminderTimesScreen
                 TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "सुबह"
-                        "gu" -> "સવાર"
-                        else -> "Morning"
-                    },
+                    label = stringResource(R.string.morning),
                     hour = presets.morningHour,
                     minute = presets.morningMinute,
                     onHourChange = { newHour -> updatePresets { p -> p.copy(morningHour = newHour) } },
@@ -154,11 +145,7 @@ fun SettingsScreen(
                 )
 
                 TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "दोपहर"
-                        "gu" -> "બપોર"
-                        else -> "Lunch"
-                    },
+                    label = stringResource(R.string.lunch),
                     hour = presets.lunchHour,
                     minute = presets.lunchMinute,
                     onHourChange = { newHour -> updatePresets { p -> p.copy(lunchHour = newHour) } },
@@ -166,11 +153,7 @@ fun SettingsScreen(
                 )
 
                 TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "शाम"
-                        "gu" -> "સાંજ"
-                        else -> "Evening"
-                    },
+                    label = stringResource(R.string.evening),
                     hour = presets.eveningHour,
                     minute = presets.eveningMinute,
                     onHourChange = { newHour -> updatePresets { p -> p.copy(eveningHour = newHour) } },
@@ -178,11 +161,7 @@ fun SettingsScreen(
                 )
 
                 TimePresetRow(
-                    label = when (currentLanguage) {
-                        "hi" -> "रात"
-                        "gu" -> "રાત્રે"
-                        else -> "Bedtime"
-                    },
+                    label = stringResource(R.string.bedtime),
                     hour = presets.bedtimeHour,
                     minute = presets.bedtimeMinute,
                     onHourChange = { newHour -> updatePresets { p -> p.copy(bedtimeHour = newHour) } },
@@ -194,11 +173,7 @@ fun SettingsScreen(
 
             // Notifications: Repeat interval
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "सूचना"
-                    "gu" -> "સૂચનાઓ"
-                    else -> "Notifications"
-                },
+                text = stringResource(R.string.notifications_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
@@ -213,11 +188,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = when (currentLanguage) {
-                        "hi" -> "दोहराने का अंतराल: ${sliderValue.toInt()} मिनट"
-                        "gu" -> "પુનરાવર્તન અંતર: ${sliderValue.toInt()} મિનિટ"
-                        else -> "Repeat interval: ${sliderValue.toInt()} min"
-                    },
+                    text = stringResource(R.string.repeat_interval, sliderValue.toInt()),
                     fontSize = 16.sp
                 )
                 Slider(
@@ -236,11 +207,7 @@ fun SettingsScreen(
 
             // Privacy (single toggle for lock-screen details)
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "गोपनीयता"
-                    "gu" -> "ગોપનીયતા"
-                    else -> "Privacy"
-                },
+                text = stringResource(R.string.privacy_label),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
@@ -255,20 +222,12 @@ fun SettingsScreen(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = when (currentLanguage) {
-                            "hi" -> "लॉक स्क्रीन पर पूरी जानकारी दिखाएं"
-                            "gu" -> "લોક સ્ક્રીન પર સંપૂર્ણ વિગતો બતાવો"
-                            else -> "Show full details on lock screen"
-                        },
+                        text = stringResource(R.string.show_full_details_lock_screen),
                         fontSize = 16.sp,
                         color = androidx.compose.ui.graphics.Color.Black
                     )
                     Text(
-                        text = when (currentLanguage) {
-                            "hi" -> "डिफ़ॉल्ट रूप से छुपाया जाता है"
-                            "gu" -> "મૂળરૂપે છુપાયેલું"
-                            else -> "Hidden by default"
-                        },
+                        text = stringResource(R.string.hidden_by_default),
                         fontSize = 12.sp,
                         color = androidx.compose.ui.graphics.Color.Gray
                     )

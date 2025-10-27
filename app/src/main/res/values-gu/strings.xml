@@ -118,4 +118,56 @@
     <string name="medication_photo">દવાનો ફોટો</string>
     <string name="delete_time">આ રીમાઇન્ડર સમય કાઢી નાખો</string>
     <string name="medication_taken_indicator">આજે દવા લીધી</string>
+
+    <!-- MainActivity UI Strings -->
+    <string name="start_tracking_medications">તમારી દવાઓને ટ્રેક કરવાનું શરૂ કરો</string>
+    <string name="collapse">છુપાવો</string>
+    <string name="expand">વિસ્તાર કરો</string>
+    <string name="list_view">યાદી</string>
+    <string name="timeline_view">સમયરેખા</string>
+    <string name="todays_schedule">આજનું શેડ્યૂલ</string>
+    <string name="your_medications">તમારી દવાઓ</string>
+    <string name="exit_app">એપ બંધ કરીએ?</string>
+    <string name="exit_app_message">શું તમે ખરેખર એપ બંધ કરવા માંગો છો?</string>
+    <string name="yes_exit">હા, બંધ કરો</string>
+    <string name="edit">સંપાદિત કરો</string>
+    <string name="overdue_medications">મુદતવીતી દવાઓ</string>
+    <string name="yesterday">ગઈકાલે %s</string>
+    <string name="no_times_set">કોઈ સમય સેટ નથી</string>
+    <string name="step_1_of_3">પગલું 1 / 3</string>
+    <string name="what_is_medication">તમારી દવા શું છે?</string>
+    <string name="take_photo_medicine">દવાનો ફોટો લો</string>
+    <string name="step_2_of_3">પગલું 2 / 3</string>
+    <string name="add_voice_instructions">વૉઇસ સૂચનાઓ ઉમેરો?</string>
+    <string name="optional">(વૈકલ્પિક)</string>
+    <string name="continue_without_recording">તમે અવાજ રેકોર્ડ કર્યા વિના ચાલુ રાખી શકો છો</string>
+    <string name="no_audio">(કોઈ અવાજ નથી)</string>
+
+    <!-- SettingsScreen UI Strings -->
+    <string name="language_label">ભાષા</string>
+    <string name="preset_times">સમય પ્રીસેટ</string>
+    <string name="morning">સવાર</string>
+    <string name="lunch">બપોર</string>
+    <string name="evening">સાંજ</string>
+    <string name="bedtime">રાત્રે</string>
+    <string name="notifications_label">સૂચનાઓ</string>
+    <string name="repeat_interval">પુનરાવર્તન અંતર: %d મિનિટ</string>
+    <string name="privacy_label">ગોપનીયતા</string>
+    <string name="show_full_details_lock_screen">લોક સ્ક્રીન પર સંપૂર્ણ વિગતો બતાવો</string>
+    <string name="hidden_by_default">મૂળરૂપે છુપાયેલું</string>
+
+    <!-- HistoryScreen UI Strings -->
+    <string name="history">ઇતિહાસ</string>
+    <string name="by_date">તારીખ દ્વારા</string>
+    <string name="by_medication">દવા દ્વારા</string>
+    <string name="last_x_days">છેલ્લા %d દિવસ</string>
+    <string name="load_previous_3_days">પાછલા 3 દિવસ લોડ કરો</string>
+    <string name="yesterday_label">ગઈકાલે</string>
+    <string name="on_time">સમય પર</string>
+    <string name="late_label">મોડું</string>
+    <string name="late_by_x_min">%d મિનિટ મોડું</string>
+    <string name="skipped_label">છોડી દીધું</string>
+    <string name="missed_label">લીધું નથી</string>
+    <string name="scheduled_time">સમયસૂચિ: %s</string>
+    <string name="taken_time">લીધું: %s</string>
 </resources>

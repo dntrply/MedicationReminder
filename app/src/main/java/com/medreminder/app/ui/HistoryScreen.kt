@@ -19,11 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.medreminder.app.R
 import com.medreminder.app.data.Medication
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.MedicationHistory
@@ -85,11 +87,7 @@ fun HistoryScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        when (currentLanguage) {
-                            "hi" -> "इतिहास"
-                            "gu" -> "ઇતિહાસ"
-                            else -> "History"
-                        },
+                        stringResource(R.string.history),
                         style = MaterialTheme.typography.headlineSmall,
                         color = Color.White
                     )
@@ -132,11 +130,7 @@ fun HistoryScreen(
                     )
                 ) {
                     Text(
-                        when (currentLanguage) {
-                            "hi" -> "तिथि के अनुसार"
-                            "gu" -> "તારીખ દ્વારા"
-                            else -> "By Date"
-                        },
+                        stringResource(R.string.by_date),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -152,11 +146,7 @@ fun HistoryScreen(
                     )
                 ) {
                     Text(
-                        when (currentLanguage) {
-                            "hi" -> "दवा के अनुसार"
-                            "gu" -> "દવા દ્વારા"
-                            else -> "By Medication"
-                        },
+                        stringResource(R.string.by_medication),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -165,11 +155,7 @@ fun HistoryScreen(
 
             // Date range label
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "पिछले $daysToShow दिन"
-                    "gu" -> "છેલ્લા $daysToShow દિવસ"
-                    else -> "Last $daysToShow Days"
-                },
+                text = stringResource(R.string.last_x_days, daysToShow),
                 fontSize = 14.sp,
                 color = Color.Gray,
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -260,11 +246,7 @@ fun HistoryByDateView(
                 Icon(Icons.Default.ExpandMore, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    when (currentLanguage) {
-                        "hi" -> "पिछले 3 दिन लोड करें"
-                        "gu" -> "પાછલા 3 દિવસ લોડ કરો"
-                        else -> "Load Previous 3 Days"
-                    },
+                    stringResource(R.string.load_previous_3_days),
                     fontSize = 16.sp
                 )
             }
@@ -326,11 +308,7 @@ fun HistoryByMedicationView(
                 Icon(Icons.Default.ExpandMore, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    when (currentLanguage) {
-                        "hi" -> "पिछले 3 दिन लोड करें"
-                        "gu" -> "પાછલા 3 દિવસ લોડ કરો"
-                        else -> "Load Previous 3 Days"
-                    },
+                    stringResource(R.string.load_previous_3_days),
                     fontSize = 16.sp
                 )
             }
@@ -350,17 +328,21 @@ fun DateSectionHeader(dateTimestamp: Long, currentLanguage: String) {
         when {
             cal.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR) &&
             cal.get(Calendar.YEAR) == today.get(Calendar.YEAR) -> {
+                // TODO: stringResource can't be called from remember block
                 when (currentLanguage) {
                     "hi" -> "आज"
                     "gu" -> "આજે"
+                    "mr" -> "आज"
                     else -> "Today"
                 }
             }
             cal.get(Calendar.DAY_OF_YEAR) == yesterday.get(Calendar.DAY_OF_YEAR) &&
             cal.get(Calendar.YEAR) == yesterday.get(Calendar.YEAR) -> {
+                // TODO: stringResource can't be called from remember block
                 when (currentLanguage) {
                     "hi" -> "कल"
                     "gu" -> "ગઈકાલે"
+                    "mr" -> "काल"
                     else -> "Yesterday"
                 }
             }
@@ -465,6 +447,7 @@ fun HistoryEntryCard(
             when (currentLanguage) {
                 "hi" -> "समय पर"
                 "gu" -> "સમય પર"
+                "mr" -> "वेळेवर"
                 else -> "On time"
             }
         } else {
@@ -472,17 +455,20 @@ fun HistoryEntryCard(
             when (currentLanguage) {
                 "hi" -> "$lateMinutes मिनट देरी"
                 "gu" -> "$lateMinutes મિનિટ મોડું"
+                "mr" -> "$lateMinutes मिनिटे उशीर"
                 else -> "Late by $lateMinutes min"
             }
         }
         "SKIPPED" -> when (currentLanguage) {
             "hi" -> "छोड़ दिया"
             "gu" -> "છોડી દીધું"
+            "mr" -> "वगळले"
             else -> "Skipped"
         }
         else -> when (currentLanguage) {
             "hi" -> "नहीं लिया"
             "gu" -> "લીધું નથી"
+            "mr" -> "घेतले नाही"
             else -> "Missed"
         }
     }
@@ -572,6 +558,7 @@ fun HistoryEntryCard(
                     text = when (currentLanguage) {
                         "hi" -> "निर्धारित: $scheduledTimeStr"
                         "gu" -> "સમયસૂચિ: $scheduledTimeStr"
+                        "mr" -> "नियोजित: $scheduledTimeStr"
                         else -> "Scheduled: $scheduledTimeStr"
                     },
                     fontSize = 14.sp,
@@ -586,6 +573,7 @@ fun HistoryEntryCard(
                         text = when (currentLanguage) {
                             "hi" -> "लिया: $takenTimeStr"
                             "gu" -> "લીધું: $takenTimeStr"
+                            "mr" -> "घेतले: $takenTimeStr"
                             else -> "Taken: $takenTimeStr"
                         },
                         fontSize = 14.sp,

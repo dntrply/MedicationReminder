@@ -188,6 +188,7 @@ fun SetReminderTimesScreen(
                                 contentDescription = when (currentLanguage) {
                                     "hi" -> "नाम / फोटो संपादित करें"
                                     "gu" -> "નામ / ફોટો સંપાદિત કરો"
+                                    "mr" -> "नाव / फोटो संपादित करा"
                                     else -> "Edit Name / Photo"
                                 },
                                 tint = androidx.compose.ui.graphics.Color.White,
@@ -219,6 +220,7 @@ fun SetReminderTimesScreen(
                     text = when (currentLanguage) {
                         "hi" -> "चरण 3 / 3"
                         "gu" -> "પગલું 3 / 3"
+                        "mr" -> "पायरी 3 / 3"
                         else -> "Step 3 of 3"
                     },
                     fontSize = 16.sp,
@@ -234,6 +236,7 @@ fun SetReminderTimesScreen(
                 text = when (currentLanguage) {
                     "hi" -> "इसे कब लेना है?"
                     "gu" -> "તે ક્યારે લેવું?"
+                    "mr" -> "हे कधी घ्यायचे आहे?"
                     else -> "When should you take it?"
                 },
                 fontSize = 28.sp,
@@ -253,6 +256,7 @@ fun SetReminderTimesScreen(
                     text = when (currentLanguage) {
                         "hi" -> "लोकप्रिय समय:"
                         "gu" -> "લોકપ્રિય સમય:"
+                        "mr" -> "लोकप्रिय वेळ:"
                         else -> "Quick Select:"
                     },
                     fontSize = 18.sp,
@@ -274,6 +278,7 @@ fun SetReminderTimesScreen(
                     label = when (currentLanguage) {
                         "hi" -> "सुबह"
                         "gu" -> "સવાર"
+                        "mr" -> "सकाळ"
                         else -> "Morning"
                     },
                     time = formatTime(presetTimes.morningHour, presetTimes.morningMinute),
@@ -297,6 +302,7 @@ fun SetReminderTimesScreen(
                     label = when (currentLanguage) {
                         "hi" -> "दोपहर"
                         "gu" -> "બપોર"
+                        "mr" -> "दुपार"
                         else -> "Lunch"
                     },
                     time = formatTime(presetTimes.lunchHour, presetTimes.lunchMinute),
@@ -320,6 +326,7 @@ fun SetReminderTimesScreen(
                     label = when (currentLanguage) {
                         "hi" -> "शाम"
                         "gu" -> "સાંજ"
+                        "mr" -> "संध्याकाळ"
                         else -> "Evening"
                     },
                     time = formatTime(presetTimes.eveningHour, presetTimes.eveningMinute),
@@ -343,6 +350,7 @@ fun SetReminderTimesScreen(
                     label = when (currentLanguage) {
                         "hi" -> "रात"
                         "gu" -> "રાત્રે"
+                        "mr" -> "रात्री"
                         else -> "Bedtime"
                     },
                     time = formatTime(presetTimes.bedtimeHour, presetTimes.bedtimeMinute),
@@ -386,6 +394,7 @@ fun SetReminderTimesScreen(
                     when (currentLanguage) {
                         "hi" -> "विशेष समय जोड़ें"
                         "gu" -> "વિશેષ સમય ઉમેરો"
+                        "mr" -> "सानुकूल वेळ जोडा"
                         else -> "Add Custom Time"
                     },
                     fontSize = 20.sp
@@ -400,6 +409,7 @@ fun SetReminderTimesScreen(
                     text = when (currentLanguage) {
                         "hi" -> "चयनित समय:"
                         "gu" -> "પસંદ કરેલ સમય:"
+                        "mr" -> "निवडलेल्या वेळा:"
                         else -> "Selected Times:"
                     },
                     fontSize = 18.sp,
@@ -446,6 +456,7 @@ fun SetReminderTimesScreen(
                         text = when (currentLanguage) {
                             "hi" -> "समय चुनें"
                             "gu" -> "સમય પસંદ કરો"
+                            "mr" -> "वेळ निवडा"
                             else -> "Select Time"
                         },
                         fontSize = 24.sp
@@ -682,6 +693,7 @@ fun SetReminderTimesScreen(
                                     timeErrorMessage = when (currentLanguage) {
                                         "hi" -> "यह समय पहले से जोड़ा गया है"
                                         "gu" -> "આ સમય પહેલેથી ઉમેરવામાં આવ્યો છે"
+                                        "mr" -> "ही वेळ आधीपासूनच जोडलेली आहे"
                                         else -> "This time is already added"
                                     }
                                     showTimeError = true

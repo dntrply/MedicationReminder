@@ -79,6 +79,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Set app locale based on saved preference
+        val savedLanguage = getCurrentLanguage(this)
+        setAppLocale(this, savedLanguage)
+
         // Clean up stale pending medications on app start (in background thread)
         lifecycleScope.launch(Dispatchers.IO) {
             PendingMedicationTracker.cleanupStaleEntries(this@MainActivity)
@@ -882,11 +886,7 @@ fun HomeScreen(
 
                 // Subtle hint text
                 Text(
-                    text = when (currentLanguage) {
-                        "hi" -> "अपनी दवाओं को ट्रैक करना शुरू करें"
-                        "gu" -> "તમારી દવાઓને ટ્રેક કરવાનું શરૂ કરો"
-                        else -> "Start tracking your medications"
-                    },
+                    text = stringResource(R.string.start_tracking_medications),
                     fontSize = 16.sp,
                     color = androidx.compose.ui.graphics.Color.Gray,
                     textAlign = TextAlign.Center
@@ -964,17 +964,9 @@ fun HomeScreen(
                             )
                             Text(
                                 text = if (isLowerSectionExpanded)
-                                    when (currentLanguage) {
-                                        "hi" -> "छुपाएं"
-                                        "gu" -> "છુપાવો"
-                                        else -> "Collapse"
-                                    }
+                                    stringResource(R.string.collapse)
                                 else
-                                    when (currentLanguage) {
-                                        "hi" -> "विस्तार करें"
-                                        "gu" -> "વિસ્તાર કરો"
-                                        else -> "Expand"
-                                    },
+                                    stringResource(R.string.expand),
                                 fontSize = 14.sp,
                                 color = androidx.compose.ui.graphics.Color.Gray,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
@@ -1021,11 +1013,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = when (currentLanguage) {
-                                    "hi" -> "सूची"
-                                    "gu" -> "યાદી"
-                                    else -> "List"
-                                },
+                                text = stringResource(R.string.list_view),
                                 fontSize = 18.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 color = if (!showTimelineView)
@@ -1070,11 +1058,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = when (currentLanguage) {
-                                    "hi" -> "समयरेखा"
-                                    "gu" -> "સમયરેખા"
-                                    else -> "Timeline"
-                                },
+                                text = stringResource(R.string.timeline_view),
                                 fontSize = 18.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 color = if (showTimelineView)
@@ -1095,16 +1079,8 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = when {
-                            showTimelineView -> when (currentLanguage) {
-                                "hi" -> "आज का कार्यक्रम"
-                                "gu" -> "આજનું શેડ્યૂલ"
-                                else -> "Today's Schedule"
-                            }
-                            else -> when (currentLanguage) {
-                                "hi" -> "आपकी दवाएं"
-                                "gu" -> "તમારી દવાઓ"
-                                else -> "Your Medications"
-                            }
+                            showTimelineView -> stringResource(R.string.todays_schedule)
+                            else -> stringResource(R.string.your_medications)
                         },
                         fontSize = 16.sp,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -1173,22 +1149,14 @@ fun HomeScreen(
                 },
                 title = {
                     Text(
-                        text = when (currentLanguage) {
-                            "hi" -> "ऐप से बाहर निकलें?"
-                            "gu" -> "એપ બંધ કરીએ?"
-                            else -> "Exit App?"
-                        },
+                        text = stringResource(R.string.exit_app),
                         fontSize = 24.sp,
                         textAlign = TextAlign.Center
                     )
                 },
                 text = {
                     Text(
-                        text = when (currentLanguage) {
-                            "hi" -> "क्या आप वाकई ऐप से बाहर निकलना चाहते हैं?"
-                            "gu" -> "શું તમે ખરેખર એપ બંધ કરવા માંગો છો?"
-                            else -> "Do you really want to exit the app?"
-                        },
+                        text = stringResource(R.string.exit_app_message),
                         fontSize = 18.sp,
                         textAlign = TextAlign.Center
                     )
@@ -1206,11 +1174,7 @@ fun HomeScreen(
                             .height(56.dp)
                     ) {
                         Text(
-                            when (currentLanguage) {
-                                "hi" -> "हाँ, बाहर निकलें"
-                                "gu" -> "હા, બંધ કરો"
-                                else -> "Yes, Exit"
-                            },
+                            stringResource(R.string.yes_exit),
                             fontSize = 18.sp
                         )
                     }
@@ -1223,11 +1187,7 @@ fun HomeScreen(
                             .height(56.dp)
                     ) {
                         Text(
-                            when (currentLanguage) {
-                                "hi" -> "रद्द करें"
-                                "gu" -> "રદ કરો"
-                                else -> "Cancel"
-                            },
+                            stringResource(R.string.cancel),
                             fontSize = 18.sp
                         )
                     }
@@ -1434,11 +1394,7 @@ fun MedicationCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = when (currentLanguage) {
-                            "hi" -> "संपादित करें"
-                            "gu" -> "સંપાદિત કરો"
-                            else -> "Edit"
-                        },
+                        contentDescription = stringResource(R.string.edit),
                         tint = androidx.compose.ui.graphics.Color(0xFF4A90E2),
                         modifier = Modifier.size(28.dp)
                     )
@@ -1584,11 +1540,7 @@ fun OverdueMedicationsSection(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = when (currentLanguage) {
-                        "hi" -> "बकाया दवाएं"
-                        "gu" -> "મુદતવીતી દવાઓ"
-                        else -> "OVERDUE MEDICATIONS"
-                    },
+                    text = stringResource(R.string.overdue_medications),
                     fontSize = 20.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     color = androidx.compose.ui.graphics.Color(0xFFD32F2F)
@@ -1690,7 +1642,7 @@ fun OverdueMedicationCard(
                             tint = androidx.compose.ui.graphics.Color.White
                         )
                         Text(
-                            text = "LATE",
+                            text = stringResource(R.string.late_label),
                             fontSize = 10.sp,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                             color = androidx.compose.ui.graphics.Color.White
@@ -1729,11 +1681,7 @@ fun OverdueMedicationCard(
                 val dateStr = when {
                     scheduledCal.get(java.util.Calendar.DAY_OF_YEAR) == yesterday.get(java.util.Calendar.DAY_OF_YEAR) &&
                     scheduledCal.get(java.util.Calendar.YEAR) == yesterday.get(java.util.Calendar.YEAR) -> {
-                        when (currentLanguage) {
-                            "hi" -> "कल $timeStr"
-                            "gu" -> "ગઈકાલે $timeStr"
-                            else -> "Yesterday $timeStr"
-                        }
+                        stringResource(R.string.yesterday, timeStr)
                     }
                     else -> {
                         val sdf = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
@@ -1988,11 +1936,7 @@ fun TimelineView(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = when (currentLanguage) {
-                            "hi" -> "कोई समय सेट नहीं है"
-                            "gu" -> "કોઈ સમય સેટ નથી"
-                            else -> "No times set"
-                        },
+                        text = stringResource(R.string.no_times_set),
                         fontSize = 20.sp,
                         color = androidx.compose.ui.graphics.Color.Gray,
                         textAlign = TextAlign.Center
@@ -2465,11 +2409,7 @@ fun MedicationActionPalette(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            when (currentLanguage) {
-                                "hi" -> "लिया"
-                                "gu" -> "લીધું"
-                                else -> "Taken"
-                            },
+                            stringResource(R.string.taken),
                             fontSize = 18.sp,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                         )
@@ -2499,11 +2439,7 @@ fun MedicationActionPalette(
                             .height(52.dp)
                     ) {
                         Text(
-                            when (currentLanguage) {
-                                "hi" -> "स्नूज़"
-                                "gu" -> "સ્નૂઝ"
-                                else -> "Snooze"
-                            },
+                            stringResource(R.string.snooze),
                             fontSize = 16.sp
                         )
                     }
@@ -2529,11 +2465,7 @@ fun MedicationActionPalette(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                     ) {
                         Text(
-                            when (currentLanguage) {
-                                "hi" -> "छोड़ें"
-                                "gu" -> "છોડો"
-                                else -> "Skip"
-                            },
+                            stringResource(R.string.skip),
                             fontSize = 16.sp
                         )
                     }
@@ -2547,11 +2479,7 @@ fun MedicationActionPalette(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    when (currentLanguage) {
-                        "hi" -> "रद्द करें"
-                        "gu" -> "રદ કરો"
-                        else -> "Cancel"
-                    },
+                    stringResource(R.string.cancel),
                     fontSize = 16.sp
                 )
             }
@@ -2682,11 +2610,7 @@ fun AddMedicationStep1(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = when (currentLanguage) {
-                        "hi" -> "चरण 1 / 3"
-                        "gu" -> "પગલું 1 / 3"
-                        else -> "Step 1 of 3"
-                    },
+                    text = stringResource(R.string.step_1_of_3),
                     fontSize = 16.sp,
                     color = androidx.compose.ui.graphics.Color.Gray,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
@@ -2694,11 +2618,7 @@ fun AddMedicationStep1(
             }
             // Large instruction text
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "आपकी दवा क्या है?"
-                    "gu" -> "તમારી દવા શું છે?"
-                    else -> "What is your medication?"
-                },
+                text = stringResource(R.string.what_is_medication),
                 fontSize = 28.sp,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 color = androidx.compose.ui.graphics.Color.Black
@@ -2770,11 +2690,7 @@ fun AddMedicationStep1(
                                 color = androidx.compose.ui.graphics.Color.Gray
                             )
                             Text(
-                                text = when (currentLanguage) {
-                                    "hi" -> "दवा की फोटो लें"
-                                    "gu" -> "દવાનો ફોટો લો"
-                                    else -> "Take a photo of medicine"
-                                },
+                                text = stringResource(R.string.take_photo_medicine),
                                 fontSize = 16.sp,
                                 color = androidx.compose.ui.graphics.Color.Gray
                             )
@@ -2951,11 +2867,7 @@ fun AddMedicationStep2(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = when (currentLanguage) {
-                        "hi" -> "चरण 2 / 3"
-                        "gu" -> "પગલું 2 / 3"
-                        else -> "Step 2 of 3"
-                    },
+                    text = stringResource(R.string.step_2_of_3),
                     fontSize = 16.sp,
                     color = androidx.compose.ui.graphics.Color.Gray,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
@@ -2966,11 +2878,7 @@ fun AddMedicationStep2(
 
             // Large instruction text
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "आवाज़ निर्देश जोड़ें?"
-                    "gu" -> "વૉઇસ સૂચનાઓ ઉમેરો?"
-                    else -> "Add voice instructions?"
-                },
+                text = stringResource(R.string.add_voice_instructions),
                 fontSize = 28.sp,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 color = androidx.compose.ui.graphics.Color.Black
@@ -2979,11 +2887,7 @@ fun AddMedicationStep2(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "(वैकल्पिक)"
-                    "gu" -> "(વૈકલ્પિક)"
-                    else -> "(Optional)"
-                },
+                text = stringResource(R.string.optional),
                 fontSize = 18.sp,
                 color = androidx.compose.ui.graphics.Color.Gray
             )
@@ -3154,11 +3058,7 @@ fun AddMedicationStep2(
 
             // Helper text
             Text(
-                text = when (currentLanguage) {
-                    "hi" -> "आप आवाज़ रिकॉर्ड किए बिना जारी रख सकते हैं"
-                    "gu" -> "તમે અવાજ રેકોર્ડ કર્યા વિના ચાલુ રાખી શકો છો"
-                    else -> "You can continue without recording"
-                },
+                text = stringResource(R.string.continue_without_recording),
                 fontSize = 14.sp,
                 color = androidx.compose.ui.graphics.Color.Gray,
                 modifier = Modifier.fillMaxWidth(),
@@ -3191,11 +3091,7 @@ fun AddMedicationStep2(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        when (currentLanguage) {
-                            "hi" -> "(कोई आवाज़ नहीं)"
-                            "gu" -> "(કોઈ અવાજ નથી)"
-                            else -> "(No audio)"
-                        },
+                        stringResource(R.string.no_audio),
                         fontSize = 16.sp,
                         color = androidx.compose.ui.graphics.Color.Gray
                     )

@@ -132,4 +132,56 @@
     <string name="medication_photo">Photo of medication</string>
     <string name="delete_time">Delete this reminder time</string>
     <string name="medication_taken_indicator">Medication taken today</string>
+
+    <!-- MainActivity UI Strings -->
+    <string name="start_tracking_medications">Start tracking your medications</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="list_view">List</string>
+    <string name="timeline_view">Timeline</string>
+    <string name="todays_schedule">Today\'s Schedule</string>
+    <string name="your_medications">Your Medications</string>
+    <string name="exit_app">Exit App?</string>
+    <string name="exit_app_message">Do you really want to exit the app?</string>
+    <string name="yes_exit">Yes, Exit</string>
+    <string name="edit">Edit</string>
+    <string name="overdue_medications">OVERDUE MEDICATIONS</string>
+    <string name="yesterday">Yesterday %s</string>
+    <string name="no_times_set">No times set</string>
+    <string name="step_1_of_3">Step 1 of 3</string>
+    <string name="what_is_medication">What is your medication?</string>
+    <string name="take_photo_medicine">Take a photo of medicine</string>
+    <string name="step_2_of_3">Step 2 of 3</string>
+    <string name="add_voice_instructions">Add voice instructions?</string>
+    <string name="optional">(Optional)</string>
+    <string name="continue_without_recording">You can continue without recording</string>
+    <string name="no_audio">(No audio)</string>
+
+    <!-- SettingsScreen UI Strings -->
+    <string name="language_label">Language</string>
+    <string name="preset_times">Preset Times</string>
+    <string name="morning">Morning</string>
+    <string name="lunch">Lunch</string>
+    <string name="evening">Evening</string>
+    <string name="bedtime">Bedtime</string>
+    <string name="notifications_label">Notifications</string>
+    <string name="repeat_interval">Repeat interval: %d min</string>
+    <string name="privacy_label">Privacy</string>
+    <string name="show_full_details_lock_screen">Show full details on lock screen</string>
+    <string name="hidden_by_default">Hidden by default</string>
+
+    <!-- HistoryScreen UI Strings -->
+    <string name="history">History</string>
+    <string name="by_date">By Date</string>
+    <string name="by_medication">By Medication</string>
+    <string name="last_x_days">Last %d Days</string>
+    <string name="load_previous_3_days">Load Previous 3 Days</string>
+    <string name="yesterday_label">Yesterday</string>
+    <string name="on_time">On time</string>
+    <string name="late_label">LATE</string>
+    <string name="late_by_x_min">Late by %d min</string>
+    <string name="skipped_label">Skipped</string>
+    <string name="missed_label">Missed</string>
+    <string name="scheduled_time">Scheduled: %s</string>
+    <string name="taken_time">Taken: %s</string>
 </resources>

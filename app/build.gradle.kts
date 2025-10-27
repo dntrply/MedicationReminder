@@ -12,8 +12,8 @@ android {
         applicationId = "com.medreminder.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.10.0"
+        versionCode = 5
+        versionName = "0.11.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

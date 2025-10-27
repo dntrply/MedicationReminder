@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">औषध आठवण</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">औषध आठवण</string>
+    <string name="no_medications">अद्याप कोणतीही औषधे नाहीत</string>
+    <string name="add_first_medication">सुरुवात करण्यासाठी तुमचे पहिले औषध जोडा</string>
+    <string name="add_medication">औषध जोडा</string>
+
+    <!-- Welcome Screen Features -->
+    <string name="feature_schedule">वेळापत्रक आणि ट्रॅक करा</string>
+    <string name="feature_notify">स्मार्ट आठवणी</string>
+    <string name="feature_history">इतिहास पहा</string>
+
+    <string name="today">आज</string>
+    <string name="next_reminder">पुढील: %s</string>
+    <string name="last_taken">शेवटच्या वेळी घेतले: %s</string>
+    <string name="taken_today">घेतले: आज %s</string>
+
+    <!-- Add/Edit Medication -->
+    <string name="medication_name">औषधाचे नाव</string>
+    <string name="medication_name_hint">उदा., अॅस्पिरिन</string>
+    <string name="medication_name_required">औषधाचे नाव आवश्यक आहे</string>
+    <string name="photo">फोटो</string>
+    <string name="add_photo">फोटो जोडा</string>
+    <string name="take_photo">फोटो काढा</string>
+    <string name="choose_from_gallery">गॅलरीमधून निवडा</string>
+    <string name="dosage_instructions">डोस / सूचना</string>
+    <string name="dosage_hint">उदा., 1 गोळी</string>
+    <string name="notes">टिपा (पर्यायी)</string>
+    <string name="notes_hint">उदा., जेवणासोबत घ्या</string>
+    <string name="next">पुढे</string>
+    <string name="save">जतन करा</string>
+    <string name="cancel">रद्द करा</string>
+    <string name="delete">हटवा</string>
+    <string name="edit_medication">औषध संपादित करा</string>
+
+    <!-- Audio Notes -->
+    <string name="audio_note">ऑडिओ टीप</string>
+    <string name="add_audio_note">ऑडिओ टीप जोडा</string>
+    <string name="record_audio">ऑडिओ रेकॉर्ड करा</string>
+    <string name="recording">रेकॉर्डिंग…</string>
+    <string name="stop_recording">रेकॉर्डिंग थांबवा</string>
+    <string name="play_audio">ऑडिओ चालवा</string>
+    <string name="stop_playback">प्लेबॅक थांबवा</string>
+    <string name="delete_audio">ऑडिओ टीप हटवा</string>
+    <string name="audio_instructions">सूचना रेकॉर्ड करा (कमाल 60 सेकंद)</string>
+    <string name="audio_note_hint">उदा., नाश्त्यापूर्वी घ्या</string>
+    <string name="recording_time">रेकॉर्डिंग: %s</string>
+    <string name="audio_duration">कालावधी: %s</string>
+    <string name="has_audio_note">ऑडिओ सूचना आहेत</string>
+
+    <!-- Medication Times -->
+    <string name="set_reminder_times">केव्हा घ्यायचे</string>
+    <string name="when_remind">तुम्ही हे केव्हा घेता?</string>
+    <string name="add_another_time">आणखी एक वेळ जोडा</string>
+    <string name="repeat_on">पुनरावृत्ती करा:</string>
+    <string name="time_required">किमान एक वेळ आवश्यक आहे</string>
+
+    <!-- Days of week -->
+    <string name="monday">सो</string>
+    <string name="tuesday">मं</string>
+    <string name="wednesday">बु</string>
+    <string name="thursday">गु</string>
+    <string name="friday">शु</string>
+    <string name="saturday">श</string>
+    <string name="sunday">र</string>
+    <string name="monday_full">सोमवार</string>
+    <string name="tuesday_full">मंगळवार</string>
+    <string name="wednesday_full">बुधवार</string>
+    <string name="thursday_full">गुरुवार</string>
+    <string name="friday_full">शुक्रवार</string>
+    <string name="saturday_full">शनिवार</string>
+    <string name="sunday_full">रविवार</string>
+
+    <!-- Reminder Screen -->
+    <string name="medication_reminder">औषध आठवण</string>
+    <string name="time_to_take">%s घेण्याची वेळ</string>
+    <string name="time_to_take_multiple">%d औषधे घेण्याची वेळ</string>
+    <string name="scheduled_for">नियोजित: %s</string>
+    <string name="ive_taken_it">मी घेतले आहे</string>
+    <string name="ive_taken_all">मी सर्व घेतले</string>
+    <string name="remind_me_later">10 मिनिटांनी आठवण करा</string>
+    <string name="remind_in_minutes">%1$d मिनिटांनी आठवण करा</string>
+    <string name="snooze_all">सर्व स्नूझ करा</string>
+    <string name="skip_dose">वगळा</string>
+    <string name="skip_all">सर्व वगळा</string>
+    <string name="dismiss">डिसमिस</string>
+    <string name="marked_as_taken">घेतले म्हणून चिन्हांकित केले</string>
+    <string name="reminder_snoozed">10 मिनिटांसाठी आठवण स्नूझ केली</string>
+    <string name="dose_skipped">डोस वगळला</string>
+
+    <!-- Take Medications Screen -->
+    <string name="take_medications_now">आता औषधे घ्या</string>
+    <string name="no_pending_medications">कोणतीही प्रलंबित औषधे नाहीत</string>
+    <string name="back_to_home">मुख्यपृष्ठावर परत जा</string>
+    <string name="or_take_action_on_all">किंवा सर्वांवर कार्यवाही करा:</string>
+    <string name="taken">घेतले</string>
+    <string name="snooze">स्नूझ</string>
+    <string name="skip">वगळा</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">औषध आठवणी</string>
+    <string name="notification_channel_description">तुमची औषधे घेण्यासाठी आठवणी</string>
+    <string name="notification_title">%s घेण्याची वेळ</string>
+    <string name="notification_text">%s</string>
+    <string name="multiple_medications">%d औषधांची वेळ</string>
+
+    <!-- Settings -->
+    <string name="settings">सेटिंग्ज</string>
+    <string name="notification_sound">सूचना ध्वनी</string>
+    <string name="snooze_duration">स्नूझ कालावधी</string>
+    <string name="about">माहिती</string>
+    <string name="no_schedule">कोणतेही वेळापत्रक सेट नाही</string>
+
+    <!-- Confirmations -->
+    <string name="delete_medication_title">औषध हटवायचे?</string>
+    <string name="delete_medication_message">तुम्हाला खात्री आहे की तुम्ही %s हटवू इच्छिता? सर्व आठवणी आणि इतिहास काढला जाईल.</string>
+    <string name="delete_confirm">हटवा</string>
+
+    <!-- Permissions -->
+    <string name="camera_permission_required">फोटो काढण्यासाठी कॅमेरा परवानगी आवश्यक आहे</string>
+    <string name="notification_permission_required">आठवणींसाठी सूचना परवानगी आवश्यक आहे</string>
+    <string name="grant_permission">परवानगी द्या</string>
+
+    <!-- Errors -->
+    <string name="error_saving_medication">औषध जतन करताना त्रुटी</string>
+    <string name="error_loading_medications">औषधे लोड करताना त्रुटी</string>
+    <string name="error_taking_photo">फोटो काढताना त्रुटी</string>
+
+    <!-- Content Descriptions (Accessibility) -->
+    <string name="medication_photo">औषधाचा फोटो</string>
+    <string name="delete_time">ही आठवण वेळ हटवा</string>
+    <string name="medication_taken_indicator">आज औषध घेतले</string>
+
+    <!-- MainActivity UI Strings -->
+    <string name="start_tracking_medications">तुमच्या औषधांचा मागोवा सुरू करा</string>
+    <string name="collapse">लपवा</string>
+    <string name="expand">विस्तार करा</string>
+    <string name="list_view">यादी</string>
+    <string name="timeline_view">वेळापट्टी</string>
+    <string name="todays_schedule">आजचे वेळापत्रक</string>
+    <string name="your_medications">तुमची औषधे</string>
+    <string name="exit_app">अॅप बंद करायचे?</string>
+    <string name="exit_app_message">तुम्हाला खरोखर अॅप बंद करायचे आहे का?</string>
+    <string name="yes_exit">होय, बंद करा</string>
+    <string name="edit">संपादित करा</string>
+    <string name="overdue_medications">थकित औषधे</string>
+    <string name="yesterday">काल %s</string>
+    <string name="no_times_set">कोणतीही वेळ सेट नाही</string>
+    <string name="step_1_of_3">पायरी 1 / 3</string>
+    <string name="what_is_medication">तुमचे औषध काय आहे?</string>
+    <string name="take_photo_medicine">औषधाचा फोटो काढा</string>
+    <string name="step_2_of_3">पायरी 2 / 3</string>
+    <string name="add_voice_instructions">आवाज सूचना जोडायच्या?</string>
+    <string name="optional">(पर्यायी)</string>
+    <string name="continue_without_recording">तुम्ही रेकॉर्डिंग न करता सुरू ठेवू शकता</string>
+    <string name="no_audio">(कोणतेही ऑडिओ नाही)</string>
+
+    <!-- SettingsScreen UI Strings -->
+    <string name="language_label">भाषा</string>
+    <string name="preset_times">वेळ प्रीसेट</string>
+    <string name="morning">सकाळ</string>
+    <string name="lunch">दुपार</string>
+    <string name="evening">संध्याकाळ</string>
+    <string name="bedtime">रात्री</string>
+    <string name="notifications_label">सूचना</string>
+    <string name="repeat_interval">पुनरावृत्ती मध्यांतर: %d मिनिटे</string>
+    <string name="privacy_label">गोपनीयता</string>
+    <string name="show_full_details_lock_screen">लॉक स्क्रीनवर संपूर्ण माहिती दाखवा</string>
+    <string name="hidden_by_default">मूलतः लपवलेले</string>
+
+    <!-- HistoryScreen UI Strings -->
+    <string name="history">इतिहास</string>
+    <string name="by_date">तारखेनुसार</string>
+    <string name="by_medication">औषधानुसार</string>
+    <string name="last_x_days">मागील %d दिवस</string>
+    <string name="load_previous_3_days">मागील 3 दिवस लोड करा</string>
+    <string name="yesterday_label">काल</string>
+    <string name="on_time">वेळेवर</string>
+    <string name="late_label">उशीर</string>
+    <string name="late_by_x_min">%d मिनिटे उशीर</string>
+    <string name="skipped_label">वगळले</string>
+    <string name="missed_label">घेतले नाही</string>
+    <string name="scheduled_time">नियोजित: %s</string>
+    <string name="taken_time">घेतले: %s</string>
+</resources>

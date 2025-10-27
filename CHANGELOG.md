@@ -1,11 +1,38 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to twhy is the dat his project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.11.0] - 2025-10-27
+
+Minor release adding Marathi language support and fixing localization issues.
+
+### Added
+- **Marathi language support** - Complete translation with 187 strings in values-mr/strings.xml
+- Marathi (मराठी) now available alongside English, Hindi (हिंदी), and Gujarati (ગુજરાતી)
+- `late_label` string resource for "LATE" badge in all 4 languages
+
+### Changed
+- **Refactored MainActivity.kt for better i18n** - Replaced 27 hardcoded `when(currentLanguage)` blocks with `stringResource()` calls
+- **Refactored SettingsScreen.kt for better i18n** - Replaced 12 hardcoded blocks with `stringResource()` calls
+- Added 45+ new string resources across all language files for better maintainability
+- Updated HistoryScreen.kt and SetReminderTimesScreen.kt to include Marathi translations in remaining hardcoded blocks
+
+### Fixed
+- **LATE badge now displays in user's selected language** - Previously showed "LATE" in English regardless of language setting
+- Added locale initialization in `onCreate()` to ensure `stringResource()` picks up correct language
+- Locale properly set via both `attachBaseContext()` and `onCreate()` for consistent behavior
+
+### Technical
+- Updated app version: versionCode = 5, versionName = "0.11.0"
+- Created values-mr/strings.xml with complete Marathi translations
+- MainActivity.kt: Significantly reduced code with stringResource() refactoring (168 deletions)
+- SettingsScreen.kt: Simplified with stringResource() refactoring (79 deletions)
+- Adding future languages now only requires creating new values-{locale}/strings.xml files
 
 ## [0.10.0] - 2025-01-26
 

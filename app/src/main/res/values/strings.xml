@@ -169,6 +169,9 @@
     <string name="privacy_label">Privacy</string>
     <string name="show_full_details_lock_screen">Show full details on lock screen</string>
     <string name="hidden_by_default">Hidden by default</string>
+    <string name="features_label">Features</string>
+    <string name="audio_transcription">Audio Transcription</string>
+    <string name="audio_transcription_description">Convert audio notes to text (requires 75MB download)</string>
 
     <!-- HistoryScreen UI Strings -->
     <string name="history">History</string>

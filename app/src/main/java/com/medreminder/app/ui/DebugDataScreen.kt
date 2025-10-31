@@ -25,6 +25,7 @@ import com.medreminder.app.data.Medication
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.MedicationHistory
 import com.medreminder.app.data.Profile
+import com.medreminder.app.data.TranscriptionStats
 import com.medreminder.app.notifications.PendingMedicationTracker
 import com.medreminder.app.data.SettingsStore
 import com.medreminder.app.data.PresetTimes
@@ -49,10 +50,12 @@ fun DebugDataScreen(
     var medications by remember { mutableStateOf<List<Medication>>(emptyList()) }
     var history by remember { mutableStateOf<List<MedicationHistory>>(emptyList()) }
     var pendingMeds by remember { mutableStateOf<List<PendingMedicationTracker.PendingMedication>>(emptyList()) }
+    var transcriptionStats by remember { mutableStateOf<List<TranscriptionStats>>(emptyList()) }
     var activeProfileId by remember { mutableStateOf<Long?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var exportMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteHistoryDialog by remember { mutableStateOf(false) }
+    var showDeleteTranscriptionStatsDialog by remember { mutableStateOf(false) }
 
     // Get app version
     val appVersion = remember {
@@ -75,6 +78,7 @@ fun DebugDataScreen(
     var medsExpanded by remember { mutableStateOf(true) }
     var historyExpanded by remember { mutableStateOf(true) }
     var pendingExpanded by remember { mutableStateOf(true) }
+    var transcriptionStatsExpanded by remember { mutableStateOf(true) }
 
     val loadData: () -> Unit = {
         isLoading = true
@@ -86,6 +90,7 @@ fun DebugDataScreen(
                 medications = db.medicationDao().getAllMedicationsSync()
                 history = db.historyDao().getAllHistorySync()
                 pendingMeds = PendingMedicationTracker.getPendingMedications(context)
+                transcriptionStats = db.transcriptionStatsDao().getAllStats().first()
             }
             isLoading = false
         }
@@ -134,6 +139,8 @@ fun DebugDataScreen(
                                             appendLine("      \"name\": \"${med.name}\",")
                                             appendLine("      \"photoUri\": \"${med.photoUri}\",")
                                             appendLine("      \"audioNotePath\": \"${med.audioNotePath}\",")
+                                            appendLine("      \"audioTranscription\": \"${med.audioTranscription}\",")
+                                            appendLine("      \"audioTranscriptionLanguage\": \"${med.audioTranscriptionLanguage}\",")
                                             appendLine("      \"reminderTimesJson\": ${med.reminderTimesJson ?: "null"}")
                                             append("    }")
                                             if (index < medications.size - 1) appendLine(",")
@@ -230,6 +237,51 @@ fun DebugDataScreen(
                     } else {
                         items(pendingMeds) { p ->
                             PendingMedDebugCard(p)
+                        }
+                    }
+                }
+
+                // Transcription Statistics (collapsible)
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "TRANSCRIPTION STATISTICS",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (transcriptionStats.isNotEmpty()) {
+                            IconButton(
+                                onClick = { showDeleteTranscriptionStatsDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete all transcription stats",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        IconButton(onClick = { transcriptionStatsExpanded = !transcriptionStatsExpanded }) {
+                            Icon(
+                                imageVector = if (transcriptionStatsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (transcriptionStatsExpanded) "Collapse" else "Expand"
+                            )
+                        }
+                    }
+                }
+                if (transcriptionStatsExpanded) {
+                    item {
+                        TranscriptionStatsSummary(stats = transcriptionStats)
+                    }
+                    if (transcriptionStats.isNotEmpty()) {
+                        items(transcriptionStats) { stat ->
+                            TranscriptionStatCard(stat)
                         }
                     }
                 }
@@ -435,6 +487,44 @@ fun DebugDataScreen(
             }
         )
     }
+
+    // Delete transcription stats confirmation dialog
+    if (showDeleteTranscriptionStatsDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteTranscriptionStatsDialog = false },
+            title = { Text("Delete All Transcription Stats?") },
+            text = { Text("This will permanently delete all ${transcriptionStats.size} transcription statistics entries. This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                try {
+                                    val db = MedicationDatabase.getDatabase(context)
+                                    db.transcriptionStatsDao().deleteAllStats()
+                                    exportMessage = "Deleted ${transcriptionStats.size} transcription stats entries"
+                                }  catch (e: Exception) {
+                                    exportMessage = "Error deleting transcription stats: ${e.message}"
+                                }
+                            }
+                            showDeleteTranscriptionStatsDialog = false
+                            loadData() // Reload data
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteTranscriptionStatsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -511,6 +601,9 @@ fun MedicationDebugCard(med: Medication) {
                 }
                 DataRow("Audio File", fileInfo)
             }
+            // Transcription fields
+            DataRow("Transcription", med.audioTranscription ?: "null")
+            DataRow("Transcription Lang", med.audioTranscriptionLanguage ?: "null")
             DataRow("Reminder Times", med.reminderTimesJson ?: "null")
             DataRow("Created At", Date(med.createdAt).toString())
         }
@@ -576,5 +669,222 @@ fun DataRow(label: String, value: String) {
             fontFamily = FontFamily.Monospace,
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+@Composable
+fun TranscriptionStatsSummary(stats: List<TranscriptionStats>) {
+    val successCount = stats.count { it.status == "success" }
+    val failedCount = stats.count { it.status == "failed" }
+    val pendingCount = stats.count { it.status == "pending" }
+
+    val longestTranscription = stats
+        .filter { it.status == "success" }
+        .maxByOrNull { it.transcriptionLength ?: 0 }
+
+    val avgDuration = stats
+        .filter { it.status == "success" && it.durationMs != null }
+        .mapNotNull { it.durationMs }
+        .average()
+        .takeIf { !it.isNaN() }?.toLong()
+
+    val avgSpeedRatio = stats
+        .filter { it.status == "success" && it.processingSpeedRatio != null }
+        .mapNotNull { it.processingSpeedRatio }
+        .average()
+        .takeIf { !it.isNaN() }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Summary stats
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem("Total", stats.size.toString(), MaterialTheme.colorScheme.primary)
+                StatItem("Success", successCount.toString(), androidx.compose.ui.graphics.Color(0xFF4CAF50))
+                StatItem("Failed", failedCount.toString(), androidx.compose.ui.graphics.Color(0xFFF44336))
+                StatItem("Pending", pendingCount.toString(), androidx.compose.ui.graphics.Color(0xFFFF9800))
+            }
+
+            if (successCount > 0) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Performance metrics
+                Text(
+                    text = "Performance Metrics",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (longestTranscription != null) {
+                    Text(
+                        text = "Longest: ${longestTranscription.medicationName} (${longestTranscription.transcriptionLength} chars)",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+
+                if (avgDuration != null) {
+                    Text(
+                        text = "Avg Duration: ${formatDuration(avgDuration)}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+
+                if (avgSpeedRatio != null) {
+                    Text(
+                        text = "Avg Speed Ratio: ${"%.1f".format(avgSpeedRatio)}x realtime",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    }
+}
+
+@Composable
+fun TranscriptionStatCard(stat: TranscriptionStats) {
+    val dateFormat = SimpleDateFormat("MMM dd, HH:mm:ss", Locale.getDefault())
+
+    val statusColor = when (stat.status) {
+        "success" -> androidx.compose.ui.graphics.Color(0xFF4CAF50)
+        "failed" -> androidx.compose.ui.graphics.Color(0xFFF44336)
+        "pending" -> androidx.compose.ui.graphics.Color(0xFFFF9800)
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Header with medication name and status
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stat.medicationName,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = statusColor.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        text = stat.status.uppercase(),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Timing information
+            DataRow("Started", dateFormat.format(Date(stat.startTime)))
+            if (stat.endTime != null) {
+                DataRow("Completed", dateFormat.format(Date(stat.endTime)))
+            }
+            if (stat.durationMs != null) {
+                DataRow("Duration", formatDuration(stat.durationMs))
+            }
+
+            // Audio file info
+            if (stat.audioDurationSeconds != null) {
+                DataRow("Audio Length", "${"%.1f".format(stat.audioDurationSeconds)}s")
+            }
+            DataRow("File Size", formatFileSize(stat.audioFileSizeBytes))
+
+            // Transcription result
+            if (stat.status == "success") {
+                if (stat.transcriptionLength != null) {
+                    DataRow("Text Length", "${stat.transcriptionLength} chars")
+                }
+                if (stat.detectedLanguage != null) {
+                    DataRow("Language", stat.detectedLanguage)
+                }
+                if (stat.processingSpeedRatio != null) {
+                    DataRow("Speed Ratio", "${"%.1f".format(stat.processingSpeedRatio)}x")
+                }
+                if (stat.transcriptionText != null && stat.transcriptionText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "\"${stat.transcriptionText.take(100)}${if (stat.transcriptionText.length > 100) "..." else ""}\"",
+                        fontSize = 10.sp,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            } else if (stat.status == "failed" && stat.errorMessage != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Error: ${stat.errorMessage}",
+                    fontSize = 10.sp,
+                    color = androidx.compose.ui.graphics.Color(0xFFF44336)
+                )
+            }
+
+            // Engine info
+            if (stat.engineId != null) {
+                DataRow("Engine", stat.engineId)
+            }
+        }
+    }
+}
+
+private fun formatDuration(ms: Long): String {
+    val seconds = ms / 1000
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return if (minutes > 0) {
+        "${minutes}m ${remainingSeconds}s"
+    } else {
+        "${seconds}s"
+    }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${"%.1f".format(bytes / 1024.0)} KB"
+        else -> "${"%.1f".format(bytes / (1024.0 * 1024.0))} MB"
     }
 }

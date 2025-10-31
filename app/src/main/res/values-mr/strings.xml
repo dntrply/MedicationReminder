@@ -170,6 +170,9 @@
     <string name="privacy_label">गोपनीयता</string>
     <string name="show_full_details_lock_screen">लॉक स्क्रीनवर संपूर्ण माहिती दाखवा</string>
     <string name="hidden_by_default">मूलतः लपवलेले</string>
+    <string name="features_label">वैशिष्ट्ये</string>
+    <string name="audio_transcription">ऑडिओ ट्रान्सक्रिप्शन</string>
+    <string name="audio_transcription_description">ऑडिओ नोट्सचे मजकूरात रूपांतर करा (75MB डाउनलोड आवश्यक)</string>
 
     <!-- HistoryScreen UI Strings -->
     <string name="history">इतिहास</string>

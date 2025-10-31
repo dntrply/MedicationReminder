@@ -49,6 +49,17 @@ fun rememberPhotoPickerState(
         }
     }
 
+    // Camera permission launcher
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val tempUri = createTempImageUri()
+            currentUri = tempUri
+            cameraLauncher.launch(tempUri)
+        }
+    }
+
     // Gallery launcher
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -63,9 +74,7 @@ fun rememberPhotoPickerState(
         showDialog = { showDialog = it },
         isDialogShowing = showDialog,
         onTakePhoto = {
-            val tempUri = createTempImageUri()
-            currentUri = tempUri
-            cameraLauncher.launch(tempUri)
+            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
         },
         onChooseFromGallery = {
             galleryLauncher.launch("image/*")

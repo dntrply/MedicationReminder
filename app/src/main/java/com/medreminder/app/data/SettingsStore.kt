@@ -18,6 +18,9 @@ object SettingsStore {
     private val SHOW_FULL_ON_LOCK = booleanPreferencesKey("show_full_on_lockscreen")
     private val REPEAT_INTERVAL_MIN = intPreferencesKey("repeat_interval_minutes")
     private val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
+    private val TRANSCRIPTION_ENABLED = booleanPreferencesKey("transcription_enabled")
+    private val TRANSCRIPTION_CONSENT = booleanPreferencesKey("transcription_consent")
+    private val TRANSCRIPTION_CONSENT_ASKED = booleanPreferencesKey("transcription_consent_asked")
 
     fun languageFlow(context: Context): Flow<String> =
         context.userPrefs.data.map { prefs -> prefs[LANGUAGE] ?: "en" }
@@ -53,6 +56,34 @@ object SettingsStore {
 
     suspend fun setActiveProfileId(context: Context, profileId: Long) {
         context.userPrefs.edit { prefs -> prefs[ACTIVE_PROFILE_ID] = profileId }
+    }
+
+    // Transcription feature toggle (default: disabled)
+    fun transcriptionEnabledFlow(context: Context): Flow<Boolean> =
+        context.userPrefs.data.map { prefs -> prefs[TRANSCRIPTION_ENABLED] ?: false }
+
+    suspend fun isTranscriptionEnabled(context: Context): Boolean {
+        return context.userPrefs.data.map { it[TRANSCRIPTION_ENABLED] ?: false }.first()
+    }
+
+    suspend fun setTranscriptionEnabled(context: Context, enabled: Boolean) {
+        context.userPrefs.edit { prefs -> prefs[TRANSCRIPTION_ENABLED] = enabled }
+    }
+
+    // Transcription consent management
+    suspend fun hasTranscriptionConsent(context: Context): Boolean {
+        return context.userPrefs.data.map { it[TRANSCRIPTION_CONSENT] ?: false }.first()
+    }
+
+    suspend fun wasTranscriptionConsentAsked(context: Context): Boolean {
+        return context.userPrefs.data.map { it[TRANSCRIPTION_CONSENT_ASKED] ?: false }.first()
+    }
+
+    suspend fun setTranscriptionConsent(context: Context, granted: Boolean) {
+        context.userPrefs.edit { prefs ->
+            prefs[TRANSCRIPTION_CONSENT] = granted
+            prefs[TRANSCRIPTION_CONSENT_ASKED] = true
+        }
     }
 }
 

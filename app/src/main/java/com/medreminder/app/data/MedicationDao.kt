@@ -26,6 +26,9 @@ interface MedicationDao {
     @Update
     suspend fun updateMedication(medication: Medication)
 
+    @Update
+    suspend fun update(medication: Medication)
+
     @Delete
     suspend fun deleteMedication(medication: Medication)
 

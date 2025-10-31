@@ -15,6 +15,8 @@ data class Medication(
     val name: String,
     val photoUri: String? = null,
     val audioNotePath: String? = null, // Path to audio instruction file
+    val audioTranscription: String? = null, // Transcribed text from audio
+    val audioTranscriptionLanguage: String? = null, // Language code of transcription (e.g., "en", "hi", "gu", "mr")
     val dosage: String? = null,
     val notes: String? = null,
     val reminderTimesJson: String? = null, // JSON string of List<ReminderTime>

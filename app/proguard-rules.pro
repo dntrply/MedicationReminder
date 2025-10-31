@@ -23,4 +23,28 @@
 # Room Database
 -keep class * extends androidx.room.RoomDatabase
 -keep @androidx.room.Entity class *
+-keep class * extends androidx.room.Dao
 -dontwarn androidx.room.paging.**
+
+# Keep all data classes
+-keep class com.medreminder.app.data.** { *; }
+
+# Kotlin serialization
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+# Keep Kotlin metadata
+-keep class kotlin.Metadata { *; }
+
+# WorkManager
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.CoroutineWorker
+
+# Compose
+-keep class androidx.compose.** { *; }
+-dontwarn androidx.compose.**
+
+# Native methods (Whisper)
+-keepclasseswithmembernames class * {
+    native <methods>;
+}

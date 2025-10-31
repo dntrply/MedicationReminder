@@ -1,4 +1,4 @@
-continue# Developer Tools for Database Inspection
+# Developer Tools for Database Inspection
 
 This document describes how to inspect the app's databases and data stores during development.
 
@@ -163,6 +163,8 @@ WHERE m.id IS NULL;
 - Clear app data and reinstall if needed
 
 ---
+
+
 
 ## Production Considerations
 

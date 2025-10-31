@@ -2,7 +2,7 @@
 
 A simple Android app to help patients (especially elderly users) remember to take their medications through visual reminders and gentle notifications.
 
-## Overview
+## Overvmarkdown settings seems to indicate ther siew
 
 This app provides medication reminders with visual aids (photos of actual medications) to improve medication adherence. Built with a focus on simplicity and accessibility for elderly users.
 
@@ -20,7 +20,7 @@ This app provides medication reminders with visual aids (photos of actual medica
 - **Medication History Tracking** to see which medications were taken and when
 - **Developer Tools** - Debug data viewer with export functionality
 - **Offline-First** - works without internet connection
-
+Note thatNote that
 ### Settings & Personalization
 - Central Settings screen for preferences
   - Language selection (English, हिन्दी, ગુજરાતી) — applies immediately

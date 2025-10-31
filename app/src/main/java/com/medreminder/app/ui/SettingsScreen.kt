@@ -45,6 +45,9 @@ fun SettingsScreen(
         scope.launch { PresetTimesManager.savePresetTimes(context, updated) }
     }
 
+    // Transcription consent dialog state
+    var showTranscriptionConsentDialog by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -240,7 +243,74 @@ fun SettingsScreen(
                 )
             }
 
+            Divider(Modifier.padding(vertical = 8.dp))
+
+            // Features section
+            Text(
+                text = stringResource(R.string.features_label),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+            )
+
+            val transcriptionEnabled by SettingsStore.transcriptionEnabledFlow(context)
+                .collectAsState(initial = false)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.audio_transcription),
+                        fontSize = 16.sp,
+                        color = androidx.compose.ui.graphics.Color.Black
+                    )
+                    Text(
+                        text = stringResource(R.string.audio_transcription_description),
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray
+                    )
+                }
+                Switch(
+                    checked = transcriptionEnabled,
+                    onCheckedChange = { checked ->
+                        if (checked) {
+                            // User is turning ON - show consent dialog
+                            showTranscriptionConsentDialog = true
+                        } else {
+                            // User is turning OFF - just disable it
+                            scope.launch { SettingsStore.setTranscriptionEnabled(context, false) }
+                        }
+                    }
+                )
+            }
+
         }
+    }
+
+    // Transcription consent dialog
+    if (showTranscriptionConsentDialog) {
+        TranscriptionConsentDialog(
+            currentLanguage = currentLanguage,
+            onDismiss = { showTranscriptionConsentDialog = false },
+            onAccept = {
+                scope.launch {
+                    // Save both the feature enabled and consent granted
+                    SettingsStore.setTranscriptionEnabled(context, true)
+                    SettingsStore.setTranscriptionConsent(context, granted = true)
+                }
+                showTranscriptionConsentDialog = false
+            },
+            onDecline = {
+                scope.launch {
+                    // Keep feature disabled and save that consent was declined
+                    SettingsStore.setTranscriptionEnabled(context, false)
+                    SettingsStore.setTranscriptionConsent(context, granted = false)
+                }
+                showTranscriptionConsentDialog = false
+            }
+        )
     }
 }
 

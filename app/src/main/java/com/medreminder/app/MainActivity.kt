@@ -58,9 +58,11 @@ import com.medreminder.app.ui.MedicationViewModel
 import com.medreminder.app.ui.ProfileViewModel
 import com.medreminder.app.ui.SetReminderTimesScreen
 import com.medreminder.app.ui.SettingsScreen
+import com.medreminder.app.ui.TranscriptionConsentDialog
 import com.medreminder.app.ui.components.PhotoPickerDialog
 import com.medreminder.app.ui.components.rememberPhotoPickerState
 import com.medreminder.app.ui.theme.MedicationReminderTheme
+import com.medreminder.app.utils.AudioTranscriptionService
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -1135,6 +1137,16 @@ fun HomeScreen(
 
     // Language selection dialog removed; language changes live under Settings
 
+    // Transcription consent dialog
+    if (viewModel.showTranscriptionConsentDialog) {
+        TranscriptionConsentDialog(
+            currentLanguage = currentLanguage,
+            onDismiss = { viewModel.dismissTranscriptionConsentDialog() },
+            onAccept = { viewModel.onTranscriptionConsentAccepted() },
+            onDecline = { viewModel.onTranscriptionConsentDeclined() }
+        )
+    }
+
     // Exit confirmation dialog
     if (showExitDialog) {
             AlertDialog(
@@ -1238,6 +1250,36 @@ fun MedicationCard(
     val context = LocalContext.current
     val audioPlayer = remember { com.medreminder.app.utils.AudioPlayer(context) }
     var isPlaying by remember { mutableStateOf(false) }
+
+    // State for translated transcription text
+    var displayTranscription by remember(medication.audioTranscription, currentLanguage) {
+        mutableStateOf(medication.audioTranscription)
+    }
+
+    // Translate transcription on-demand when language changes
+    LaunchedEffect(medication.audioTranscription, medication.audioTranscriptionLanguage, currentLanguage) {
+        if (medication.audioTranscription != null &&
+            medication.audioTranscriptionLanguage != null &&
+            medication.audioTranscriptionLanguage != currentLanguage) {
+            // Need to translate
+            withContext(Dispatchers.IO) {
+                try {
+                    val transcriptionService = AudioTranscriptionService(context)
+                    val translated = transcriptionService.translateText(
+                        medication.audioTranscription!!,
+                        medication.audioTranscriptionLanguage!!,
+                        currentLanguage
+                    )
+                    displayTranscription = translated ?: medication.audioTranscription
+                } catch (e: Exception) {
+                    // Silent failure - just show original transcription
+                    displayTranscription = medication.audioTranscription
+                }
+            }
+        } else {
+            displayTranscription = medication.audioTranscription
+        }
+    }
 
     DisposableEffect(medication.audioNotePath) {
         onDispose {
@@ -1379,6 +1421,19 @@ fun MedicationCard(
                                 color = androidx.compose.ui.graphics.Color.Gray
                             )
                         }
+                    }
+
+                    // Display transcription text if available
+                    if (!displayTranscription.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = displayTranscription!!,
+                            fontSize = 12.sp,
+                            color = androidx.compose.ui.graphics.Color(0xFF757575),
+                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                            maxLines = 2,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }

@@ -155,6 +155,9 @@
     <string name="privacy_label">ગોપનીયતા</string>
     <string name="show_full_details_lock_screen">લોક સ્ક્રીન પર સંપૂર્ણ વિગતો બતાવો</string>
     <string name="hidden_by_default">મૂળરૂપે છુપાયેલું</string>
+    <string name="features_label">સુવિધાઓ</string>
+    <string name="audio_transcription">ઑડિઓ ટ્રાન્સક્રિપ્શન</string>
+    <string name="audio_transcription_description">ઑડિઓ નોટ્સને ટેક્સ્ટમાં રૂપાંતરિત કરો (75MB ડાઉનલોડ જરૂરી)</string>
 
     <!-- HistoryScreen UI Strings -->
     <string name="history">ઇતિહાસ</string>

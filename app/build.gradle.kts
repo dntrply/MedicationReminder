@@ -12,22 +12,53 @@ android {
         applicationId = "com.medreminder.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.11.0"
+        versionCode = 6
+        versionName = "0.12.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Transcription engine configuration
+        // Set Google Cloud API key here to enable cloud transcription (empty = disabled)
+        buildConfigField("String", "GOOGLE_CLOUD_API_KEY", "\"\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("../medication-reminder.keystore")
+            storePassword = "android123"
+            keyAlias = "medication-reminder"
+            keyPassword = "android123"
+            enableV1Signing = true
+            enableV2Signing = true
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+
+            // Only include ARM64 architecture for modern phones
+            ndk {
+                abiFilters.clear()
+                abiFilters += listOf("arm64-v8a")
+            }
+        }
+
+        debug {
+            // Debug keeps all architectures for emulator support
+            ndk {
+                abiFilters.clear()
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            }
         }
     }
 
@@ -42,6 +73,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -93,6 +125,16 @@ dependencies {
 
     // DataStore (Preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // ML Kit for Translation and Language Identification
+    implementation("com.google.mlkit:translate:17.0.2")
+    implementation("com.google.mlkit:language-id:17.0.5")
+
+    // Kotlin Coroutines extensions for Play Services (required for ML Kit)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // Whisper.cpp native library (official Android JNI wrapper)
+    implementation(project(":whisper"))
 
     // Testing
     testImplementation("junit:junit:4.13.2")

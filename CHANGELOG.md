@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2025-11-01
+
+Code organization and maintainability improvements through major refactoring.
+
+### Technical
+- **MainActivity refactored for better code organization** - Extracted components into dedicated files
+  - TimelineView.kt (850 lines) - Timeline visualization and medication slot positioning
+  - MedicationCardComponents.kt (385 lines) - Medication display cards with audio playback
+  - OverdueMedicationComponents.kt (248 lines) - Overdue medication warnings and LATE badges
+  - AddMedicationWizard.kt (681 lines) - Complete medication creation wizard flow
+  - ProfileManagementScreen.kt - Added ProfileIndicator component (82 lines)
+- **Improved separation of concerns** - Each component now independently testable and maintainable
+- **Reduced MainActivity from 3,320 to 1,217 lines** - 63% reduction while maintaining all functionality
+- **No functional changes** - All features work identically, purely internal code quality improvement
+
 ## [0.13.0] - 2025-11-01
 
 Enhanced timeline visualization with 2-hour intervals and improved medication positioning for better schedule overview.

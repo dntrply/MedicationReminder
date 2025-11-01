@@ -347,3 +347,85 @@ fun ProfileDialog(
         }
     )
 }
+
+/**
+ * Profile indicator displayed in the app's top bar showing the active profile.
+ */
+@Composable
+fun ProfileIndicator(
+    profile: Profile?,
+    onProfileClick: () -> Unit
+) {
+    android.util.Log.d("ProfileIndicator", "ProfileIndicator called with profile: ${profile?.name ?: "null"}")
+    if (profile != null) {
+        android.util.Log.d("ProfileIndicator", "Rendering profile indicator for: ${profile.name}")
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onProfileClick),
+            color = androidx.compose.ui.graphics.Color(0xFFF5F5F5),
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Profile image or icon
+                if (profile.photoUri != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(Uri.parse(profile.photoUri)),
+                        contentDescription = "Profile photo",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, androidx.compose.ui.graphics.Color(0xFF4A90E2), CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Default profile icon
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(androidx.compose.ui.graphics.Color(0xFF4A90E2)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = profile.name.take(1).uppercase(),
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Profile name
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = profile.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = androidx.compose.ui.graphics.Color.Black
+                    )
+                    Text(
+                        text = "Active Profile",
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray
+                    )
+                }
+
+                // Icon to indicate clickable
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Change profile",
+                    tint = androidx.compose.ui.graphics.Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}

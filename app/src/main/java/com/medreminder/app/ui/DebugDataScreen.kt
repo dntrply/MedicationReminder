@@ -71,6 +71,7 @@ fun DebugDataScreen(
     val currentLanguage by SettingsStore.languageFlow(context).collectAsState(initial = "en")
     val presetTimes by PresetTimesManager.getPresetTimesFlow(context).collectAsState(initial = PresetTimes())
     val repeatMinutes by SettingsStore.repeatIntervalFlow(context).collectAsState(initial = 10)
+    val transcriptionEnabled by SettingsStore.transcriptionEnabledFlow(context).collectAsState(initial = false)
 
     // Collapsible section state
     var profilesExpanded by remember { mutableStateOf(true) }
@@ -241,47 +242,49 @@ fun DebugDataScreen(
                     }
                 }
 
-                // Transcription Statistics (collapsible)
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "TRANSCRIPTION STATISTICS",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (transcriptionStats.isNotEmpty()) {
-                            IconButton(
-                                onClick = { showDeleteTranscriptionStatsDialog = true }
-                            ) {
+                // Transcription Statistics (collapsible) - only show if feature is enabled
+                if (transcriptionEnabled) {
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "TRANSCRIPTION STATISTICS",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (transcriptionStats.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { showDeleteTranscriptionStatsDialog = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete all transcription stats",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { transcriptionStatsExpanded = !transcriptionStatsExpanded }) {
                                 Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete all transcription stats",
-                                    tint = MaterialTheme.colorScheme.error
+                                    imageVector = if (transcriptionStatsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = if (transcriptionStatsExpanded) "Collapse" else "Expand"
                                 )
                             }
                         }
-                        IconButton(onClick = { transcriptionStatsExpanded = !transcriptionStatsExpanded }) {
-                            Icon(
-                                imageVector = if (transcriptionStatsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = if (transcriptionStatsExpanded) "Collapse" else "Expand"
-                            )
+                    }
+                    if (transcriptionStatsExpanded) {
+                        item {
+                            TranscriptionStatsSummary(stats = transcriptionStats)
                         }
-                    }
-                }
-                if (transcriptionStatsExpanded) {
-                    item {
-                        TranscriptionStatsSummary(stats = transcriptionStats)
-                    }
-                    if (transcriptionStats.isNotEmpty()) {
-                        items(transcriptionStats) { stat ->
-                            TranscriptionStatCard(stat)
+                        if (transcriptionStats.isNotEmpty()) {
+                            items(transcriptionStats) { stat ->
+                                TranscriptionStatCard(stat)
+                            }
                         }
                     }
                 }
@@ -425,6 +428,7 @@ fun DebugDataScreen(
                                     String.format("%02d:%02d", presetTimes.bedtimeHour, presetTimes.bedtimeMinute)
                                 )
                                 DataRow("Repeat Interval", "$repeatMinutes min")
+                                DataRow("Audio Transcription", if (transcriptionEnabled) "Enabled" else "Disabled")
                             }
                         }
                     }

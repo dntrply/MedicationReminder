@@ -1332,14 +1332,14 @@ fun MedicationCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(1.dp))
 
             // Middle section: optional slim audio column + name/schedule column
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 // Always reserve a slim column for audio to keep name alignment consistent
                 Column(
                     modifier = Modifier
-                        .width(24.dp)
+                        .width(30.dp)
                         .fillMaxHeight(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -1359,18 +1359,18 @@ fun MedicationCard(
                                     isPlaying = true
                                 }
                             },
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(30.dp)
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
                                 contentDescription = if (isPlaying) "Stop audio" else "Play audio",
                                 tint = androidx.compose.ui.graphics.Color(0xFF4A90E2),
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(30.dp)
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(1.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -1956,12 +1956,14 @@ fun TimelineView(
 
     // Auto-scroll to upcoming medication hour when view is shown, history changes, or upcoming hour changes
     LaunchedEffect(upcomingHour, density, viewCounter) {
-        // Each hour block is 104dp (100dp width + 4dp spacing)
+        // Each 2-hour block is 104dp (100dp width + 4dp spacing)
+        // Calculate which 2-hour block the upcoming hour belongs to
+        val hourBlock = upcomingHour / 2
         // Convert dp to pixels for scrolling
         val scrollPosition = with(density) {
-            (upcomingHour * 104).dp.toPx().toInt()
+            (hourBlock * 104).dp.toPx().toInt()
         }
-        Log.d("Timeline", ">>> BEFORE SCROLL: current=${scrollState.value}, target=$scrollPosition, hour=$upcomingHour, historyCount=${todayHistory.size}, viewCounter=$viewCounter")
+        Log.d("Timeline", ">>> BEFORE SCROLL: current=${scrollState.value}, target=$scrollPosition, hour=$upcomingHour, hourBlock=$hourBlock, historyCount=${todayHistory.size}, viewCounter=$viewCounter")
         // Use scrollTo for instant scroll, avoiding animation conflicts
         scrollState.scrollTo(scrollPosition)
         Log.d("Timeline", ">>> AFTER SCROLL: current=${scrollState.value}")
@@ -2013,15 +2015,34 @@ fun TimelineView(
                         .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Create 24 hour blocks
-                    for (hour in 0..23) {
+                    // Create 12 two-hour blocks (0-1, 2-3, 4-5, ... 22-23)
+                    for (hourBlock in 0..11) {
+                        val startHour = hourBlock * 2
+                        val endHour = startHour + 1
                         Column(
                             modifier = Modifier.width(100.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Hour label
+                            // Hour range label (e.g., "12-2 PM", "2-4 PM")
+                            val startAmPm = if (startHour >= 12) "PM" else "AM"
+                            val endAmPm = if (endHour >= 12) "PM" else "AM"
+                            val startDisplay = when {
+                                startHour == 0 -> 12
+                                startHour > 12 -> startHour - 12
+                                else -> startHour
+                            }
+                            val endDisplay = when {
+                                endHour == 0 -> 12
+                                endHour > 12 -> endHour - 12
+                                else -> endHour
+                            }
+                            val rangeLabel = if (startAmPm == endAmPm) {
+                                "$startDisplay-$endDisplay $endAmPm"
+                            } else {
+                                "$startDisplay $startAmPm-$endDisplay $endAmPm"
+                            }
                             Text(
-                                text = formatHourLabel(hour),
+                                text = rangeLabel,
                                 fontSize = 14.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                 color = androidx.compose.ui.graphics.Color(0xFF4A90E2),
@@ -2034,11 +2055,11 @@ fun TimelineView(
                             // Container for timeline and medications
                             Box(
                                 modifier = Modifier
-                                    .widthIn(min = 100.dp, max = 200.dp)
+                                    .width(100.dp)  // Fixed width for 2-hour block
                                     .height(360.dp),
                                 contentAlignment = Alignment.TopStart
                             ) {
-                                // Hour marker line (centered)
+                                // Hour marker line at the start (left edge)
                                 Box(
                                     modifier = Modifier
                                         .width(2.dp)
@@ -2046,40 +2067,61 @@ fun TimelineView(
                                         .background(androidx.compose.ui.graphics.Color(0xFFE0E0E0))
                                 )
 
-                                // Find medications for this hour and bucket them into 4 x 15-minute slices
-                                val medicationsInHour = timeSlots.filter { it.hour == hour }.sortedBy { it.minute }
-                                val hourHeightDp = 360f
-                                val bucketCount = 4
-                                val bucketHeightDp = hourHeightDp / bucketCount
-                                // Visual tuning for tile layout
-                                val tileBlockDp = 96f // image + label + spacing (larger to avoid clipping)
-                                val verticalStepFactor = 0.40f // 40% downward step for visible overlap
+                                // Find medications for this 2-hour block
+                                val medicationsIn2HourBlock = timeSlots.filter {
+                                    it.hour == startHour || it.hour == endHour
+                                }.sortedBy { it.hour * 60 + it.minute }
 
-                                // Build buckets: 0..3 => 00-14, 15-29, 30-44, 45-59
+                                val blockWidthDp = 100f  // Total width of 2-hour block
+                                val hourHeightDp = 360f
+                                val totalMinutesInBlock = 120  // 2 hours = 120 minutes
+
+                                // Group medications that overlap in time (within same 15-min window)
+                                // This allows us to vertically stagger them
+                                val bucketCount = 8  // 2 hours * 4 buckets/hour = 8 buckets
                                 val buckets: Map<Int, List<MedicationTimeSlot>> = (0 until bucketCount).associateWith { idx ->
-                                    medicationsInHour.filter { it.minute / 15 == idx }
+                                    medicationsIn2HourBlock.filter { slot ->
+                                        val minutesFromBlockStart = (slot.hour - startHour) * 60 + slot.minute
+                                        minutesFromBlockStart / 15 == idx
+                                    }
                                 }
 
                                 buckets.forEach { (bucketIndex, group) ->
                                     if (group.isEmpty()) return@forEach
 
-                                    // Base Y for this bucket
-                                    val bucketTop = bucketIndex * bucketHeightDp
-                                    val bucketBottom = bucketTop + bucketHeightDp
-
-                                    // Stack items with overlap inside the bucket
-                                    // Reverse order so earlier medications appear on top (more visible/urgent)
+                                    // Process each medication in this bucket
+                                    // Reverse the order so later medications are drawn first (behind)
+                                    // and earlier medications are drawn last (on top)
                                     group.reversed().forEachIndexed { reverseIdx, slot ->
-                                        val idx = group.size - 1 - reverseIdx
+                                        val idx = group.size - 1 - reverseIdx  // Original index for stagger calculation
+                                        // Calculate horizontal position based on HOUR only within 2-hour block
+                                        // First hour (startHour) -> left half (0-49dp), Second hour (endHour) -> right half (50-99dp)
+                                        val isSecondHour = slot.hour == endHour
+                                        val xOffset = if (isSecondHour) blockWidthDp / 2 else 0f
 
-                                        // Vertical offset: shift later items down for visible overlap
-                                        val verticalStepDp = 20f // vertical shift per medication
-                                        val yOffset = idx * verticalStepDp
-                                        val position = bucketTop + yOffset
+                                        // Calculate vertical position based on MINUTES within the hour (0-59)
+                                        // Each hour has 4 slots: 0-14min, 15-29min, 30-44min, 45-59min
+                                        val minuteSlot = slot.minute / 15  // 0, 1, 2, or 3
+                                        val slotHeightDp = hourHeightDp / 4  // 360dp / 4 = 90dp per 15-min slot
+                                        val baseYPosition = minuteSlot * slotHeightDp
 
-                                        // Horizontal offset: push later items right
-                                        val horizontalStepDp = 24f // horizontal shift per medication
-                                        val xOffset = idx * horizontalStepDp
+                                        // Calculate vertical offset for overlapping medications
+                                        val yOffset = if (group.size > 1 && idx > 0) {
+                                            // Check if this medication is at the exact same time as the previous one
+                                            val prevSlot = group[idx - 1]
+                                            val isSameExactTime = slot.hour == prevSlot.hour && slot.minute == prevSlot.minute
+
+                                            if (isSameExactTime) {
+                                                // Same exact time: small offset just to show both exist
+                                                idx * 8f
+                                            } else {
+                                                // Different times in same bucket: larger offset to show time difference
+                                                idx * 20f
+                                            }
+                                        } else {
+                                            0f
+                                        }
+                                        val position = baseYPosition + yOffset
 
                                         Column(
                                             modifier = Modifier
@@ -2142,9 +2184,10 @@ fun TimelineView(
                                                 horizontalAlignment = Alignment.CenterHorizontally
                                             ) {
                                                 // Medication image with border for outstanding meds
-                                                // Earlier medications get higher elevation (they're on top)
+                                                // Earlier medications (idx=0) drawn last = on top, should have higher shadow elevation
+                                                // Later medications (idx>0) drawn first = in back, should have lower shadow elevation
                                                 val elevation = if (group.size > 1) {
-                                                    (2 + (group.size - idx - 1) * 2).dp
+                                                    (2 + (group.size - idx - 1) * 2).dp  // Earlier (idx 0) gets higher elevation
                                                 } else {
                                                     2.dp
                                                 }
@@ -3114,7 +3157,7 @@ fun AddMedicationStep2(
             // Helper text
             Text(
                 text = stringResource(R.string.continue_without_recording),
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 color = androidx.compose.ui.graphics.Color.Gray,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
@@ -3147,7 +3190,7 @@ fun AddMedicationStep2(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         stringResource(R.string.no_audio),
-                        fontSize = 16.sp,
+                        fontSize = 20.sp,
                         color = androidx.compose.ui.graphics.Color.Gray
                     )
                 }

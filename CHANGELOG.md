@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2025-11-01
+
+Enhanced timeline visualization with 2-hour intervals and improved medication positioning for better schedule overview.
+
+### Changed
+- **Timeline view redesigned with 2-hour intervals** - Displays medications in 12 two-hour blocks (12-1 PM, 2-3 PM, etc.) instead of 24 hourly blocks for better overview
+- **Improved medication positioning** - Horizontal position based on hour (left/right half of block), vertical position based on minutes in 15-minute slots
+- **Smart vertical staggering** - 20dp offset for medications at different times, 8dp for medications at exact same time
+- **Z-order optimization** - Earlier medications appear on top with higher elevation for better visibility
+- **UI refinements** - Larger audio buttons (24dp→30dp), improved spacing, increased font sizes for better readability
+- **Transcription statistics visibility** - Now hidden in Debug Data screen when transcription feature is disabled
+
+### Technical
+- Timeline scroll position calculation updated for 2-hour block navigation
+- Medication grouping logic enhanced to handle 8 buckets per 2-hour block
+- Drawing order reversed so earlier medications render last (on top)
+- Elevation calculation optimized for visual hierarchy
+
 ## [0.12.0] - 2025-10-31
 
 Major release adding on-device audio transcription with Whisper Tiny, global feature toggle, and comprehensive statistics tracking.

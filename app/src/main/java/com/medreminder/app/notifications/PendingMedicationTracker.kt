@@ -484,8 +484,8 @@ object PendingMedicationTracker {
 
                     val scheduledTimestamp = scheduledCal.timeInMillis
 
-                    // Only consider if this time has passed
-                    if (scheduledTimestamp > gapEnd) continue
+                    // Only consider times within the gap period (not before gapStart, not after gapEnd)
+                    if (scheduledTimestamp < gapStart || scheduledTimestamp > gapEnd) continue
 
                     // Check if there's a history entry for this time
                     val hasHistory = existingHistory.any { history ->

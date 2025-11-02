@@ -114,6 +114,7 @@
     <string name="taken_on_time_celebration">Great job! Taken on time!</string>
     <string name="taken_better_late">Better late than never!</string>
     <string name="taken_early_great">Excellent! You\'re ahead!</string>
+    <string name="medication_skipped">You skipped this medication</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">Medication Reminders</string>

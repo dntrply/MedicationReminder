@@ -100,6 +100,12 @@
     <string name="snooze">स्नूज़</string>
     <string name="skip">छोड़ें</string>
 
+    <!-- Gamified/Encouraging Messages -->
+    <string name="taken_on_time_celebration">बहुत बढ़िया! समय पर ली!</string>
+    <string name="taken_better_late">देर से ही सही, कोई बात नहीं!</string>
+    <string name="taken_early_great">उत्कृष्ट! आप आगे हैं!</string>
+    <string name="medication_skipped">आपने यह दवा छोड़ दी</string>
+
     <!-- Notifications -->
     <string name="notification_channel_name">दवा रिमाइंडर</string>
     <string name="notification_channel_description">आपकी दवाएं लेने के लिए रिमाइंडर</string>

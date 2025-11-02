@@ -618,8 +618,13 @@ fun AddMedicationStep2(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp),
-                border = BorderStroke(2.dp, androidx.compose.ui.graphics.Color(0xFF4A90E2)),
-                contentPadding = PaddingValues(12.dp)
+                border = BorderStroke(
+                    2.dp,
+                    if (audioPath == null) androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                    else androidx.compose.ui.graphics.Color.LightGray
+                ),
+                contentPadding = PaddingValues(12.dp),
+                enabled = audioPath == null
             ) {
                 Row(
                     horizontalArrangement = Arrangement.Center,
@@ -629,13 +634,14 @@ fun AddMedicationStep2(
                         stringResource(R.string.skip),
                         fontSize = 24.sp,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                        color = if (audioPath == null) androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                               else androidx.compose.ui.graphics.Color.LightGray
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         stringResource(R.string.no_audio),
                         fontSize = 20.sp,
-                        color = androidx.compose.ui.graphics.Color.Gray
+                        color = androidx.compose.ui.graphics.Color.LightGray
                     )
                 }
             }

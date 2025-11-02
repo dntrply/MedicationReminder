@@ -173,4 +173,10 @@
     <string name="missed_label">લીધું નથી</string>
     <string name="scheduled_time">સમયસૂચિ: %s</string>
     <string name="taken_time">લીધું: %s</string>
+
+    <!-- Gamified/Encouraging Messages -->
+    <string name="taken_on_time_celebration">ખૂબ સરસ! સમયસર લીધી!</string>
+    <string name="taken_better_late">મોડેથી પણ કોઈ વાંધો નથી!</string>
+    <string name="taken_early_great">ઉત્તમ! તમે આગળ છો!</string>
+    <string name="medication_skipped">તમે આ દવા છોડી દીધી</string>
 </resources>

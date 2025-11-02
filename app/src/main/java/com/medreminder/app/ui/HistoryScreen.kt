@@ -435,13 +435,13 @@ fun HistoryEntryCard(
 
     val statusColor = when (history.action) {
         "TAKEN" -> if (history.wasOnTime) Color(0xFF4CAF50) else Color(0xFFFF9800)
-        "SKIPPED" -> Color(0xFFFF5722)
+        "SKIPPED" -> Color(0xFFFF9800)  // Orange to match Timeline view
         else -> Color(0xFFFF6B6B) // MISSED or unknown
     }
 
     val statusIcon = when (history.action) {
         "TAKEN" -> if (history.wasOnTime) Icons.Default.CheckCircle else Icons.Default.Schedule
-        "SKIPPED" -> Icons.Default.Close
+        "SKIPPED" -> Icons.Default.Forward  // Match Timeline skip badge
         else -> Icons.Default.Warning
     }
 

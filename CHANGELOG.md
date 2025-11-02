@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2025-11-02
+
+Enhanced timeline visualization with intelligent medication stacking, comprehensive status badges across all views, and visual consistency improvements for elderly users.
+
+### Added
+- **Orange skip badge for skipped medications** - New visual indicator to distinguish skipped medications from taken/pending
+  - 🟠 Orange badge (20dp) with forward arrow icon in Timeline view
+  - 🟠 Large orange badge (48dp) in Action Palette dialog
+  - Traffic light color system: Red (pending) → Orange (skipped) → Green (taken)
+  - "Already Skipped" view in Action Palette with orange-themed message card
+- **Skipped medication status in all views** - Complete visual consistency across the entire app
+  - Timeline view shows orange skip badge on medication images
+  - Action Palette shows orange badge with "You skipped this medication" message
+  - History view now uses orange forward arrow (was red X)
+- **Status badges in Action Palette** - Visual indicators now appear on large medication images in dialogs
+  - 🔴 Red warning badge for pending medications (48dp)
+  - 🟠 Orange skip badge for skipped medications (48dp)
+  - 🟢 Green checkmark badge for taken medications (48dp)
+  - Consistent with Timeline view badges for immediate recognition
+- **Superimposed time labels on medication images** - Time displayed within images for better space efficiency
+  - Semi-transparent black background (75% opacity) at top of image
+  - Bold white text (11sp) for high contrast and readability
+  - Rounded bottom corners for polished appearance
+  - Always visible even when medications overlap
+  - Saves ~14dp vertical space per medication
+
+### Changed
+- **Universal vertical stacking for all medications in same hour** - Prevents overlapping medications in Timeline
+  - Changed from 15-minute bucket grouping to full hour grouping
+  - All medications within same hour (e.g., 3:00, 3:15, 3:20) now vertically staggered
+  - 20dp generous offset per medication based on index position
+  - Proportional positioning based on minutes within hour
+- **Status-based z-ordering in Timeline** - Medications layered by importance
+  - Pending medications: Drawn last (appear on top), 8dp shadow elevation
+  - Next scheduled: Middle layer, 4dp shadow elevation
+  - Taken medications: Drawn first (pushed to back), 2dp shadow elevation
+  - Ensures most important medications are always visible
+- **Consistent skip icon across all views** - Replaced X icon with forward arrow
+  - History view now uses `Icons.Default.Forward` (was `Icons.Default.Close`)
+  - Color changed to `#FF9800` Material Orange (was `#FF5722` Deep Orange)
+  - Matches Timeline and Action Palette for visual consistency
+
+### Technical
+- Enhanced medication grouping algorithm in TimelineView to group by hour instead of 15-minute buckets
+- Implemented proportional vertical positioning for medications based on exact minute value
+- Added pending medication status tracking in Action Palette using PendingMedicationTracker flow
+- Added multilingual support for "medication_skipped" string (English, Hindi, Gujarati)
+- Refactored Action Palette to support three distinct views: Taken, Skipped, and Pending/Action
+
 ## [0.14.0] - 2025-11-02
 
 Major UX overhaul with gamification, elderly-friendly timeline dialogs, audio playback controls, history correction, and consistent time formatting.

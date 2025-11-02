@@ -343,53 +343,64 @@ fun TimelineView(
 
                                 val blockWidthDp = 100f  // Total width of 2-hour block
                                 val hourHeightDp = 360f
-                                val totalMinutesInBlock = 120  // 2 hours = 120 minutes
 
-                                // Group medications that overlap in time (within same 15-min window)
-                                // This allows us to vertically stagger them
-                                val bucketCount = 8  // 2 hours * 4 buckets/hour = 8 buckets
-                                val buckets: Map<Int, List<MedicationTimeSlot>> = (0 until bucketCount).associateWith { idx ->
-                                    medicationsIn2HourBlock.filter { slot ->
-                                        val minutesFromBlockStart = (slot.hour - startHour) * 60 + slot.minute
-                                        minutesFromBlockStart / 15 == idx
+                                // Group medications by HOUR (not 15-min buckets)
+                                // This allows us to vertically stagger ALL medications within the same hour
+                                val hourGroups: Map<Int, List<MedicationTimeSlot>> = medicationsIn2HourBlock.groupBy { it.hour }
+
+                                hourGroups.forEach { (hour, hourMedications) ->
+                                    if (hourMedications.isEmpty()) return@forEach
+
+                                    // First, calculate status for each medication in the hour
+                                    val slotsWithStatus = hourMedications.map { slot ->
+                                        val isTaken = todayHistory.any { history ->
+                                            val takenCal = java.util.Calendar.getInstance()
+                                            takenCal.timeInMillis = history.scheduledTime
+                                            history.medicationId == slot.medication.id &&
+                                                takenCal.get(java.util.Calendar.HOUR_OF_DAY) == slot.hour &&
+                                                takenCal.get(java.util.Calendar.MINUTE) == slot.minute &&
+                                                history.action == "TAKEN"
+                                        }
+
+                                        val isPending = pendingMeds.any {
+                                            it.medicationId == slot.medication.id &&
+                                            it.hour == slot.hour &&
+                                            it.minute == slot.minute
+                                        }
+
+                                        // Determine priority for z-ordering:
+                                        // 0 = pending (highest priority, most to the front)
+                                        // 1 = next scheduled (not taken, not pending yet)
+                                        // 2 = taken (lowest priority, pushed to back)
+                                        val zPriority = when {
+                                            isTaken -> 2
+                                            isPending -> 0
+                                            else -> 1  // Next scheduled
+                                        }
+
+                                        Triple(slot, zPriority, isTaken)
                                     }
-                                }
 
-                                buckets.forEach { (bucketIndex, group) ->
-                                    if (group.isEmpty()) return@forEach
+                                    // Sort by z-priority: higher priority (lower number) drawn LAST (appears on top)
+                                    // So we reverse sort: draw taken (2) first, then scheduled (1), then pending (0) last
+                                    val sortedSlots = slotsWithStatus.sortedByDescending { it.second }
 
-                                    // Process each medication in this bucket
-                                    // Reverse the order so later medications are drawn first (behind)
-                                    // and earlier medications are drawn last (on top)
-                                    group.reversed().forEachIndexed { reverseIdx, slot ->
-                                        val idx = group.size - 1 - reverseIdx  // Original index for stagger calculation
+                                    // Process each medication in this hour with generous vertical offset
+                                    sortedSlots.forEachIndexed { indexInHour, (slot, zPriority, isTakenStatus) ->
                                         // Calculate horizontal position based on HOUR only within 2-hour block
                                         // First hour (startHour) -> left half (0-49dp), Second hour (endHour) -> right half (50-99dp)
                                         val isSecondHour = slot.hour == endHour
                                         val xOffset = if (isSecondHour) blockWidthDp / 2 else 0f
 
                                         // Calculate vertical position based on MINUTES within the hour (0-59)
-                                        // Each hour has 4 slots: 0-14min, 15-29min, 30-44min, 45-59min
-                                        val minuteSlot = slot.minute / 15  // 0, 1, 2, or 3
-                                        val slotHeightDp = hourHeightDp / 4  // 360dp / 4 = 90dp per 15-min slot
-                                        val baseYPosition = minuteSlot * slotHeightDp
+                                        // Use proportional positioning: minute 0 = top (0dp), minute 59 = near bottom
+                                        // The hour spans 180dp (half of the 360dp timeline height for 2 hours)
+                                        val minutePositionRatio = slot.minute / 60f  // 0.0 to ~0.98
+                                        val baseYPosition = minutePositionRatio * (hourHeightDp / 2)  // Scale to 180dp (half the timeline)
 
-                                        // Calculate vertical offset for overlapping medications
-                                        val yOffset = if (group.size > 1 && idx > 0) {
-                                            // Check if this medication is at the exact same time as the previous one
-                                            val prevSlot = group[idx - 1]
-                                            val isSameExactTime = slot.hour == prevSlot.hour && slot.minute == prevSlot.minute
-
-                                            if (isSameExactTime) {
-                                                // Same exact time: small offset just to show both exist
-                                                idx * 8f
-                                            } else {
-                                                // Different times in same bucket: larger offset to show time difference
-                                                idx * 20f
-                                            }
-                                        } else {
-                                            0f
-                                        }
+                                        // Apply universal vertical stagger for ALL medications in this hour
+                                        // Each medication gets offset based on its index in the hour (0, 1, 2, 3...)
+                                        val yOffset = indexInHour * 20f  // Generous 20dp offset per medication
                                         val position = baseYPosition + yOffset
 
                                         Column(
@@ -417,6 +428,15 @@ fun TimelineView(
                                                     Log.d("Timeline", "Found match for ${slot.medication.name} at ${slot.hour}:${slot.minute}")
                                                 }
                                                 matches
+                                            }
+
+                                            val isSkipped = todayHistory.any { history ->
+                                                val skippedCal = java.util.Calendar.getInstance()
+                                                skippedCal.timeInMillis = history.scheduledTime
+                                                history.medicationId == slot.medication.id &&
+                                                    skippedCal.get(java.util.Calendar.HOUR_OF_DAY) == slot.hour &&
+                                                    skippedCal.get(java.util.Calendar.MINUTE) == slot.minute &&
+                                                    history.action == "SKIPPED"  // Only count as skipped if action is SKIPPED
                                             }
 
                                             // A medication should only be marked as "outstanding" if:
@@ -449,137 +469,157 @@ fun TimelineView(
                                             Log.d("Timeline", "Final isOutstanding: $isOutstanding")
                                             Log.d("Timeline", "========================")
 
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            // Z-ordering based on status:
+                                            // - Pending (zPriority=0): drawn last (on top), highest elevation
+                                            // - Next scheduled (zPriority=1): middle elevation
+                                            // - Taken (zPriority=2): drawn first (in back), lowest elevation
+                                            val elevation = when (zPriority) {
+                                                0 -> 8.dp  // Pending: most prominent
+                                                1 -> 4.dp  // Next scheduled: moderate
+                                                else -> 2.dp  // Taken: minimal
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .shadow(
+                                                        elevation = elevation,
+                                                        shape = RoundedCornerShape(8.dp)
+                                                    )
+                                                    .clickable {
+                                                        selectedMedication = slot
+                                                    }
                                             ) {
-                                                // Medication image with border for outstanding meds
-                                                // Earlier medications (idx=0) drawn last = on top, should have higher shadow elevation
-                                                // Later medications (idx>0) drawn first = in back, should have lower shadow elevation
-                                                val elevation = if (group.size > 1) {
-                                                    (2 + (group.size - idx - 1) * 2).dp  // Earlier (idx 0) gets higher elevation
+                                                if (slot.medication.photoUri != null) {
+                                                    Image(
+                                                        painter = rememberAsyncImagePainter(
+                                                            Uri.parse(slot.medication.photoUri)
+                                                        ),
+                                                        contentDescription = slot.medication.name,
+                                                        modifier = Modifier
+                                                            .size(56.dp)
+                                                            .then(
+                                                                if (isOutstanding) {
+                                                                    Modifier.border(
+                                                                        width = 3.dp,
+                                                                        color = androidx.compose.ui.graphics.Color(0xFFFF6B6B),
+                                                                        shape = RoundedCornerShape(8.dp)
+                                                                    )
+                                                                } else Modifier
+                                                            )
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(androidx.compose.ui.graphics.Color.White),
+                                                        contentScale = ContentScale.Crop
+                                                    )
                                                 } else {
-                                                    2.dp
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(56.dp)
+                                                            .then(
+                                                                if (isOutstanding) {
+                                                                    Modifier.border(
+                                                                        width = 3.dp,
+                                                                        color = androidx.compose.ui.graphics.Color(0xFFFF6B6B),
+                                                                        shape = RoundedCornerShape(8.dp)
+                                                                    )
+                                                                } else Modifier
+                                                            )
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(
+                                                                if (isOutstanding)
+                                                                    androidx.compose.ui.graphics.Color(0xFFFFEBEE)
+                                                                else
+                                                                    androidx.compose.ui.graphics.Color(0xFFE3F2FD)
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Medication,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(32.dp),
+                                                            tint = if (isOutstanding)
+                                                                androidx.compose.ui.graphics.Color(0xFFFF6B6B)
+                                                            else
+                                                                androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                                                        )
+                                                    }
                                                 }
+
+                                                // Time label superimposed at the top of the image
                                                 Box(
                                                     modifier = Modifier
-                                                        .shadow(
-                                                            elevation = elevation,
-                                                            shape = RoundedCornerShape(8.dp)
+                                                        .align(Alignment.TopCenter)
+                                                        .background(
+                                                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.75f),
+                                                            RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp)
                                                         )
-                                                        .clickable {
-                                                            selectedMedication = slot
-                                                        }
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
                                                 ) {
-                                                    if (slot.medication.photoUri != null) {
-                                                        Image(
-                                                            painter = rememberAsyncImagePainter(
-                                                                Uri.parse(slot.medication.photoUri)
-                                                            ),
-                                                            contentDescription = slot.medication.name,
+                                                    Text(
+                                                        text = String.format("%02d:%02d", slot.hour, slot.minute),
+                                                        fontSize = 11.sp,
+                                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                        color = androidx.compose.ui.graphics.Color.White,
+                                                        textAlign = TextAlign.Center
+                                                    )
+                                                }
+
+                                                // Alert badge for outstanding medications
+                                                if (isOutstanding) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .offset(x = 4.dp, y = (-4).dp)
+                                                            .size(16.dp)
+                                                            .clip(CircleShape)
+                                                            .background(androidx.compose.ui.graphics.Color(0xFFFF6B6B))
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Warning,
+                                                            contentDescription = "Outstanding",
                                                             modifier = Modifier
-                                                                .size(56.dp)
-                                                                .then(
-                                                                    if (isOutstanding) {
-                                                                        Modifier.border(
-                                                                            width = 3.dp,
-                                                                            color = androidx.compose.ui.graphics.Color(0xFFFF6B6B),
-                                                                            shape = RoundedCornerShape(8.dp)
-                                                                        )
-                                                                    } else Modifier
-                                                                )
-                                                                .clip(RoundedCornerShape(8.dp))
-                                                                .background(androidx.compose.ui.graphics.Color.White),
-                                                            contentScale = ContentScale.Crop
+                                                                .fillMaxSize()
+                                                                .padding(2.dp),
+                                                            tint = androidx.compose.ui.graphics.Color.White
                                                         )
-                                                    } else {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(56.dp)
-                                                                .then(
-                                                                    if (isOutstanding) {
-                                                                        Modifier.border(
-                                                                            width = 3.dp,
-                                                                            color = androidx.compose.ui.graphics.Color(0xFFFF6B6B),
-                                                                            shape = RoundedCornerShape(8.dp)
-                                                                        )
-                                                                    } else Modifier
-                                                                )
-                                                                .clip(RoundedCornerShape(8.dp))
-                                                                .background(
-                                                                    if (isOutstanding)
-                                                                        androidx.compose.ui.graphics.Color(0xFFFFEBEE)
-                                                                    else
-                                                                        androidx.compose.ui.graphics.Color(0xFFE3F2FD)
-                                                                ),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Medication,
-                                                                contentDescription = null,
-                                                                modifier = Modifier.size(32.dp),
-                                                                tint = if (isOutstanding)
-                                                                    androidx.compose.ui.graphics.Color(0xFFFF6B6B)
-                                                                else
-                                                                    androidx.compose.ui.graphics.Color(0xFF4A90E2)
-                                                            )
-                                                        }
-                                                    }
-
-                                                    // Alert badge for outstanding medications
-                                                    if (isOutstanding) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .align(Alignment.TopEnd)
-                                                                .offset(x = 4.dp, y = (-4).dp)
-                                                                .size(16.dp)
-                                                                .clip(CircleShape)
-                                                                .background(androidx.compose.ui.graphics.Color(0xFFFF6B6B))
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Warning,
-                                                                contentDescription = "Outstanding",
-                                                                modifier = Modifier
-                                                                    .fillMaxSize()
-                                                                    .padding(2.dp),
-                                                                tint = androidx.compose.ui.graphics.Color.White
-                                                            )
-                                                        }
-                                                    }
-
-                                                    // Green checkmark badge for taken medications
-                                                    if (isTaken) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .align(Alignment.TopEnd)
-                                                                .offset(x = 4.dp, y = (-4).dp)
-                                                                .size(20.dp)
-                                                                .clip(CircleShape)
-                                                                .background(androidx.compose.ui.graphics.Color(0xFF4CAF50))
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.CheckCircle,
-                                                                contentDescription = "Taken",
-                                                                modifier = Modifier.fillMaxSize(),
-                                                                tint = androidx.compose.ui.graphics.Color.White
-                                                            )
-                                                        }
                                                     }
                                                 }
 
-                                                // Time label
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    text = String.format("%02d:%02d", slot.hour, slot.minute),
-                                                    fontSize = 10.sp,
-                                                    color = androidx.compose.ui.graphics.Color.Black,
-                                                    textAlign = TextAlign.Center,
-                                                    modifier = Modifier
-                                                        .background(
-                                                            androidx.compose.ui.graphics.Color.White,
-                                                            RoundedCornerShape(4.dp)
+                                                // Orange skip badge for skipped medications
+                                                if (isSkipped) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .offset(x = 4.dp, y = (-4).dp)
+                                                            .size(20.dp)
+                                                            .clip(CircleShape)
+                                                            .background(androidx.compose.ui.graphics.Color(0xFFFF9800))
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Forward,
+                                                            contentDescription = "Skipped",
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            tint = androidx.compose.ui.graphics.Color.White
                                                         )
-                                                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                                                )
+                                                    }
+                                                }
+
+                                                // Green checkmark badge for taken medications
+                                                if (isTaken) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .offset(x = 4.dp, y = (-4).dp)
+                                                            .size(20.dp)
+                                                            .clip(CircleShape)
+                                                            .background(androidx.compose.ui.graphics.Color(0xFF4CAF50))
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.CheckCircle,
+                                                            contentDescription = "Taken",
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            tint = androidx.compose.ui.graphics.Color.White
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -755,6 +795,17 @@ fun MedicationActionPalette(
     }
 
     val wasTaken = takenHistoryEntry != null
+
+    // Get pending medication status
+    val context2 = LocalContext.current
+    val pendingMeds by PendingMedicationTracker.pendingMedicationsFlow(context2)
+        .collectAsState(initial = emptyList())
+
+    val isPending = pendingMeds.any {
+        it.medicationId == medication.id &&
+        it.hour == hour &&
+        it.minute == minute
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -937,8 +988,139 @@ fun MedicationActionPalette(
                         }
                         } // End Column
                     } // End Box
+                } else if (wasSkipped) {
+                    // Already Skipped view - similar to Already Taken but with orange theme
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        // Close button at top-right
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = androidx.compose.ui.graphics.Color(0xFF666666),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Medication name at top
+                            Text(
+                                text = medication.name,
+                                fontSize = 24.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = androidx.compose.ui.graphics.Color(0xFF333333)
+                            )
+
+                            // Extra large medication image
+                            Box(
+                                modifier = Modifier.size(180.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (medication.photoUri != null) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(Uri.parse(medication.photoUri)),
+                                        contentDescription = medication.name,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .border(
+                                                width = 4.dp,
+                                                color = androidx.compose.ui.graphics.Color(0xFFFF9800),
+                                                shape = RoundedCornerShape(20.dp)
+                                            ),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(androidx.compose.ui.graphics.Color(0xFFFFF3E0))
+                                            .border(
+                                                width = 4.dp,
+                                                color = androidx.compose.ui.graphics.Color(0xFFFF9800),
+                                                shape = RoundedCornerShape(20.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Medication,
+                                            contentDescription = null,
+                                            tint = androidx.compose.ui.graphics.Color(0xFFFF9800),
+                                            modifier = Modifier.size(64.dp)
+                                        )
+                                    }
+                                }
+
+                                // Orange skip badge overlay at top-right
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 8.dp, y = (-8).dp)
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(androidx.compose.ui.graphics.Color(0xFFFF9800))
+                                        .border(
+                                            width = 3.dp,
+                                            color = androidx.compose.ui.graphics.Color.White,
+                                            shape = CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Forward,
+                                        contentDescription = "Skipped",
+                                        tint = androidx.compose.ui.graphics.Color.White,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                            }
+
+                            // Message card for skipped medication
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = androidx.compose.ui.graphics.Color(0xFFFFF3E0)
+                                ),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    // Icon
+                                    Text(
+                                        text = "⏭️",
+                                        fontSize = 48.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+
+                                    // Message
+                                    Text(
+                                        text = stringResource(R.string.medication_skipped),
+                                        fontSize = 20.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        color = androidx.compose.ui.graphics.Color(0xFFF57C00),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        } // End Column
+                    } // End Box
                 } else {
-                    // Show action buttons - same large image layout as "Already Taken"
+                    // Show action buttons - Pending medication with badge
                     Box(modifier = Modifier.fillMaxWidth()) {
                         // Close button at top-right
                         IconButton(
@@ -1032,8 +1214,8 @@ fun MedicationActionPalette(
                                             .fillMaxSize()
                                             .clip(RoundedCornerShape(20.dp))
                                             .border(
-                                                width = 3.dp,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                width = if (isPending) 4.dp else 3.dp,
+                                                color = if (isPending) androidx.compose.ui.graphics.Color(0xFFFF6B6B) else MaterialTheme.colorScheme.primary,
                                                 shape = RoundedCornerShape(20.dp)
                                             ),
                                         contentScale = ContentScale.Crop
@@ -1043,10 +1225,13 @@ fun MedicationActionPalette(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .clip(RoundedCornerShape(20.dp))
-                                            .background(MaterialTheme.colorScheme.primaryContainer)
+                                            .background(
+                                                if (isPending) androidx.compose.ui.graphics.Color(0xFFFFEBEE)
+                                                else MaterialTheme.colorScheme.primaryContainer
+                                            )
                                             .border(
-                                                width = 3.dp,
-                                                color = MaterialTheme.colorScheme.primary,
+                                                width = if (isPending) 4.dp else 3.dp,
+                                                color = if (isPending) androidx.compose.ui.graphics.Color(0xFFFF6B6B) else MaterialTheme.colorScheme.primary,
                                                 shape = RoundedCornerShape(20.dp)
                                             ),
                                         contentAlignment = Alignment.Center
@@ -1054,8 +1239,33 @@ fun MedicationActionPalette(
                                         Icon(
                                             imageVector = Icons.Default.Medication,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
+                                            tint = if (isPending) androidx.compose.ui.graphics.Color(0xFFFF6B6B) else MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(80.dp)
+                                        )
+                                    }
+                                }
+
+                                // Red warning badge for pending medications
+                                if (isPending) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .offset(x = 8.dp, y = (-8).dp)
+                                            .size(48.dp)
+                                            .clip(CircleShape)
+                                            .background(androidx.compose.ui.graphics.Color(0xFFFF6B6B))
+                                            .border(
+                                                width = 3.dp,
+                                                color = androidx.compose.ui.graphics.Color.White,
+                                                shape = CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = "Pending",
+                                            tint = androidx.compose.ui.graphics.Color.White,
+                                            modifier = Modifier.size(36.dp)
                                         )
                                     }
                                 }

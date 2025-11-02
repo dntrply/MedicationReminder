@@ -720,6 +720,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         // Cancel notifications
         cancelMedicationNotifications(context, notificationManager, medicationId, hour, minute)
 
+        // Cancel any scheduled alarm for this dose (in case it was skipped before the scheduled time)
+        NotificationScheduler.cancelScheduledAlarm(context, medicationId, hour, minute)
+
+        // Cancel any repeating reminders that may have been scheduled
+        NotificationScheduler.cancelRepeatingReminders(context, medicationId, hour, minute)
+
         // Remove from pending tracker
         PendingMedicationTracker.removePendingMedication(context, medicationId, hour, minute)
 
@@ -827,6 +833,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         // Cancel all notifications
         cancelGroupedNotifications(context, notificationManager, medications, hour, minute)
+
+        // Cancel scheduled alarms and repeating reminders for each medication
+        medications.forEach { med ->
+            NotificationScheduler.cancelScheduledAlarm(context, med.medicationId, hour, minute)
+            NotificationScheduler.cancelRepeatingReminders(context, med.medicationId, hour, minute)
+        }
 
         // Remove from pending tracker
         PendingMedicationTracker.removePendingMedicationsAtTime(context, hour, minute)

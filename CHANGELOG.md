@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.5] - 2025-11-03
+
+Critical bug fix for notification scheduling when doses are skipped before their scheduled time.
+
+### Fixed
+- **Pre-emptive Skip Notification Cancellation** - Scheduled alarms now properly cancelled when doses are skipped early
+  - Previously, skipping a dose before its scheduled time (e.g., skipping at 9 PM for a 10 PM dose) would record the skip in history but notifications would still fire at the scheduled time
+  - Now cancels the scheduled AlarmManager alarm when a dose is skipped, preventing notifications from firing
+  - Also cancels any repeating reminder alarms that may have been scheduled
+  - Applies to both individual medication skips and "Skip All" for grouped notifications
+  - Resolves Issue #4: Notifications still trigger after manually skipping a dose
+
+### Technical
+- Added `NotificationScheduler.cancelScheduledAlarm()` to cancel AlarmManager alarms for specific medication/time combinations
+- Updated `ReminderBroadcastReceiver.handleSkip()` to call alarm cancellation functions
+- Updated `ReminderBroadcastReceiver.handleSkipAll()` to cancel alarms for all medications in a group
+- Version bump to 0.15.5
+
+### Modified Files
+- app/src/main/java/com/medreminder/app/notifications/NotificationScheduler.kt - Added cancelScheduledAlarm() function
+- app/src/main/java/com/medreminder/app/notifications/ReminderBroadcastReceiver.kt - Added alarm cancellation to skip handlers
+- app/build.gradle.kts - Version bump to 0.15.5
+
 ## [0.15.4] - 2025-11-02
 
 Critical bug fix for grouped notification actions and major code refactoring for improved maintainability.

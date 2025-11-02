@@ -343,4 +343,95 @@ class PendingMedicationTrackerTest {
         val countAtNine = result.count { it.second == 9 && it.third == 0 }
         assertTrue("Expected 3 missed 09:00 entries across twoDaysAgo..today; got $countAtNine", countAtNine >= 2)
     }
+
+    @Test
+    fun boundary_gapEndInclusive_includesDoseAtExactGapEnd() {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val idxToday = dayIndexFor(today)
+
+        // Schedule exactly at 10:30 today
+        val reminderTimesJson = """
+            [
+              {"hour":10, "minute":30, "days":[$idxToday]}
+            ]
+        """.trimIndent()
+
+        val medication = Medication(
+            id = 2010L,
+            profileId = 1L,
+            name = "BoundaryEnd",
+            reminderTimesJson = reminderTimesJson
+        )
+
+        val gapStart = (today.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+        }.timeInMillis
+
+        val gapEnd = (today.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 30)
+        }.timeInMillis
+
+        val result = invokeFindMissed(medication, gapStart, gapEnd, emptyList())
+        val contains1030 = result.any { (_, h, m) -> h == 10 && m == 30 }
+        assertTrue("Expected to include dose at exact gapEnd (10:30)", contains1030)
+    }
+
+    @Test
+    fun notScheduledToday_isNotBackfilled() {
+        // Choose a day index that is definitely NOT today
+        val todayIdx = dayIndexFor(Calendar.getInstance())
+        val otherIdx = (todayIdx + 1) % 7
+
+        val reminderTimesJson = """
+            [
+              {"hour":9, "minute":15, "days":[$otherIdx]}
+            ]
+        """.trimIndent()
+
+        val medication = Medication(
+            id = 2011L,
+            profileId = 1L,
+            name = "NotToday",
+            reminderTimesJson = reminderTimesJson
+        )
+
+        val gapStart = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val gapEnd = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
+        val result = invokeFindMissed(medication, gapStart, gapEnd, emptyList())
+        assertTrue("Expected no backfill when the schedule isn't for today", result.isEmpty())
+    }
+
+    @Test
+    fun invalidJson_returnsEmptyList() {
+        val medication = Medication(
+            id = 2012L,
+            profileId = 1L,
+            name = "InvalidJson",
+            reminderTimesJson = "{not valid json]"
+        )
+
+        val gapStart = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, -1)
+        }.timeInMillis
+        val gapEnd = Calendar.getInstance().timeInMillis
+
+        val result = invokeFindMissed(medication, gapStart, gapEnd, emptyList())
+        assertTrue("Expected empty result when reminderTimesJson is invalid", result.isEmpty())
+    }
 }

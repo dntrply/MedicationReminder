@@ -194,6 +194,33 @@ object NotificationScheduler {
     }
 
     /**
+     * Cancel the scheduled alarm for a specific medication at a specific time
+     * This is used when a dose is skipped before its scheduled time
+     */
+    fun cancelScheduledAlarm(
+        context: Context,
+        medicationId: Long,
+        hour: Int,
+        minute: Int
+    ) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        // Cancel the initial scheduled alarm (uses same request code as scheduleNotification)
+        val intent = Intent(context, ReminderBroadcastReceiver::class.java)
+        val requestCode = (medicationId.toInt() * 10000) + (hour * 100) + minute
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.cancel(pendingIntent)
+        Log.d(TAG, "Cancelled scheduled alarm for medication ID: $medicationId at $hour:$minute")
+    }
+
+    /**
      * Cancel all notifications for a medication
      */
     fun cancelMedicationNotifications(context: Context, medication: Medication) {

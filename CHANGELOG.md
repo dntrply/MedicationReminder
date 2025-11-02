@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.2] - 2025-11-02
+
+Infrastructure release adding comprehensive testing framework for gradual test coverage expansion.
+
+### Technical
+- **Testing Infrastructure Setup** - Added comprehensive testing dependencies and utilities
+  - Added kotlinx-coroutines-test (1.7.3) for testing suspend functions and coroutines
+  - Added MockK (1.13.8) for modern Kotlin mocking framework
+  - Added androidx.arch.core:core-testing (2.2.0) for LiveData/ViewModel testing
+  - Added androidx.room:room-testing (2.6.1) for in-memory database tests
+  - Added Google Truth (1.1.5) for readable test assertions
+  - Added androidx.work:work-testing (2.9.0) for WorkManager testing
+  - Applied testing dependencies to both unit tests and instrumented tests
+- **Test Utilities Library** - Created reusable test helpers to reduce boilerplate
+  - TestUtils.kt with factory methods for creating test data (Medication, Profile, MedicationHistory, ReminderTime)
+  - Calendar/time manipulation utilities (createCalendarToday, addDays, addHours, addMinutes)
+  - JSON conversion helpers for reminder times
+  - Timestamp comparison and formatting utilities
+- **Test Constants Library** - Centralized common test values
+  - Test IDs, names, and text constants
+  - Time constants (ONE_DAY_MS, ONE_WEEK_MS, ON_TIME_TOLERANCE_MS)
+  - Days of week constants and sets (WEEKDAYS, WEEKENDS, ALL_DAYS)
+  - Sample JSON data for reminder times
+  - Action type constants (TAKEN, SKIPPED, MISSED)
+- **Example DAO Test** - Comprehensive MedicationDaoTest demonstrating best practices
+  - In-memory database setup and teardown
+  - Testing CRUD operations with coroutines (runTest)
+  - Testing Flow-based queries
+  - Query filtering by profile
+  - Edge case handling (null fields, non-existent IDs, empty database)
+  - 12 working test cases ready to run
+- **Testing Documentation** - Complete testing guide and setup summary
+  - TESTING_GUIDE.md with examples, best practices, and troubleshooting
+  - TESTING_SETUP_SUMMARY.md with quick reference and commands
+  - Test structure explanation (unit vs instrumented)
+  - AAA pattern examples and naming conventions
+  - How to run tests via Gradle and Android Studio
+
+### New Files
+- app/src/test/java/com/medreminder/app/TestUtils.kt - Test utility functions (220 lines)
+- app/src/test/java/com/medreminder/app/TestConstants.kt - Test constants (115 lines)
+- app/src/androidTest/java/com/medreminder/app/data/MedicationDaoTest.kt - Example DAO test (225 lines)
+- app/src/test/java/com/medreminder/app/TESTING_GUIDE.md - Comprehensive testing guide (550 lines)
+- TESTING_SETUP_SUMMARY.md - Quick reference summary (250 lines)
+
+### Modified Files
+- app/build.gradle.kts - Added 10 testing dependencies with organized comments
+
 ## [0.15.1] - 2025-11-02
 
 ### Fixed

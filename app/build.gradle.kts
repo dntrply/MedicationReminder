@@ -12,8 +12,8 @@ android {
         applicationId = "com.medreminder.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 11
-        versionName = "0.15.1"
+        versionCode = 12
+        versionName = "0.15.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -136,14 +136,40 @@ dependencies {
     // Whisper.cpp native library (official Android JNI wrapper)
     implementation(project(":whisper"))
 
-    // Testing
+    // Testing - Unit Tests
     testImplementation("junit:junit:4.13.2")
     // Provide org.json on the unit test classpath so JSON parsing in JVM tests executes
     testImplementation("org.json:json:20231013")
+
+    // Coroutines testing support
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+    // Mocking framework
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("io.mockk:mockk-android:1.13.8")
+
+    // Architecture Components testing (LiveData, ViewModel)
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+
+    // Room testing support (in-memory database)
+    testImplementation("androidx.room:room-testing:2.6.1")
+
+    // Truth assertions (optional but recommended for readable tests)
+    testImplementation("com.google.truth:truth:1.1.5")
+
+    // WorkManager testing
+    testImplementation("androidx.work:work-testing:2.9.0")
+
+    // Testing - Instrumented Tests (Android)
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.arch.core:core-testing:2.2.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    androidTestImplementation("com.google.truth:truth:1.1.5")
+
+    // Debug dependencies
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

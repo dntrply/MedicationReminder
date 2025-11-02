@@ -1,6 +1,7 @@
 package com.medreminder.app.ui
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -77,6 +78,9 @@ fun SetReminderTimesScreen(
     val focusManager = LocalFocusManager.current
     var requestMinuteFocus by remember { mutableStateOf(false) }
     var requestHourFocus by remember { mutableStateOf(false) }
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
 
     LaunchedEffect(requestMinuteFocus) {
         if (requestMinuteFocus) {

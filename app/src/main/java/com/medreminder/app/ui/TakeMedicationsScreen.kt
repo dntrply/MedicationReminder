@@ -1,5 +1,6 @@
 package com.medreminder.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -41,6 +42,9 @@ fun TakeMedicationsScreen(
     LaunchedEffect(hour, minute) {
         medications = PendingMedicationTracker.getPendingMedicationsAtTime(context, hour, minute)
     }
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
 
     Scaffold(
         topBar = {

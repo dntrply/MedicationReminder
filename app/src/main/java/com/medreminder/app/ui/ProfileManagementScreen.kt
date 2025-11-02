@@ -1,6 +1,7 @@
 package com.medreminder.app.ui
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,6 +44,9 @@ fun ProfileManagementScreen(
     var profileToDelete by remember { mutableStateOf<Profile?>(null) }
 
     val scope = rememberCoroutineScope()
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
 
     Scaffold(
         topBar = {

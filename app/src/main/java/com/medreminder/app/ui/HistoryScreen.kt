@@ -1,6 +1,7 @@
 package com.medreminder.app.ui
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,6 +44,9 @@ fun HistoryScreen(
     val database = remember { MedicationDatabase.getDatabase(context) }
     val historyDao = remember { database.historyDao() }
     val medicationDao = remember { database.medicationDao() }
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
 
     // State for view toggle
     var viewByDate by remember { mutableStateOf(true) }

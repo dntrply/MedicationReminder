@@ -1,5 +1,6 @@
 package com.medreminder.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -47,6 +48,9 @@ fun SettingsScreen(
 
     // Transcription consent dialog state
     var showTranscriptionConsentDialog by remember { mutableStateOf(false) }
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
 
     Scaffold(
         topBar = {

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2025-11-02
+
+### Fixed
+- **Android back button now navigates properly** - Fixes issue #2 where back button closed the app instead of navigating to previous screen
+  - Back button now returns to previous screen from Settings, History, Profiles, Take Medications, Debug, and Add/Edit Medication screens
+  - Only shows exit confirmation dialog when on home screen
+  - Consistent with standard Android navigation patterns
+
+### Technical
+- Added BackHandler to all navigation screens: SettingsScreen, SetReminderTimesScreen, TakeMedicationsScreen, HistoryScreen, DebugDataScreen, ProfileManagementScreen, AddMedicationStep1, AddMedicationStep2
+- Imported androidx.activity.compose.BackHandler in all affected UI files
+
 ## [0.15.0] - 2025-11-02
 
 Enhanced timeline visualization with intelligent medication stacking, comprehensive status badges across all views, and visual consistency improvements for elderly users.

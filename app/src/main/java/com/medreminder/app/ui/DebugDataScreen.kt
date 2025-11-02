@@ -1,5 +1,6 @@
 package com.medreminder.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,6 +49,9 @@ fun DebugDataScreen(
     val scope = rememberCoroutineScope()
     var profiles by remember { mutableStateOf<List<Profile>>(emptyList()) }
     var medications by remember { mutableStateOf<List<Medication>>(emptyList()) }
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
     var history by remember { mutableStateOf<List<MedicationHistory>>(emptyList()) }
     var pendingMeds by remember { mutableStateOf<List<PendingMedicationTracker.PendingMedication>>(emptyList()) }
     var transcriptionStats by remember { mutableStateOf<List<TranscriptionStats>>(emptyList()) }

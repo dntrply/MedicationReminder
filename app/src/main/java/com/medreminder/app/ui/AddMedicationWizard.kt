@@ -1,6 +1,7 @@
 package com.medreminder.app.ui
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -97,6 +98,9 @@ fun AddMedicationStep1(
     }
 
     val context = LocalContext.current
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
 
     // Photo picker state
     val photoPickerState = rememberPhotoPickerState(
@@ -327,6 +331,9 @@ fun AddMedicationStep2(
     val context = LocalContext.current
     val audioRecorder = remember { com.medreminder.app.utils.AudioRecorder(context) }
     val audioPlayer = remember { com.medreminder.app.utils.AudioPlayer(context) }
+
+    // Handle back button press
+    BackHandler(onBack = onBack)
 
     // Update recording duration every second while recording
     LaunchedEffect(isRecording) {

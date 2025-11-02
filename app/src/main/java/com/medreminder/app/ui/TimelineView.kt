@@ -352,7 +352,8 @@ fun TimelineView(
                                     if (hourMedications.isEmpty()) return@forEach
 
                                     // First, calculate status for each medication in the hour
-                                    val slotsWithStatus = hourMedications.map { slot ->
+                                    // Keep track of original index for consistent vertical positioning
+                                    val slotsWithStatusAndIndex = hourMedications.mapIndexed { originalIndex, slot ->
                                         val isTaken = todayHistory.any { history ->
                                             val takenCal = java.util.Calendar.getInstance()
                                             takenCal.timeInMillis = history.scheduledTime
@@ -378,15 +379,15 @@ fun TimelineView(
                                             else -> 1  // Next scheduled
                                         }
 
-                                        Triple(slot, zPriority, isTaken)
+                                        Quadruple(slot, zPriority, isTaken, originalIndex)
                                     }
 
                                     // Sort by z-priority: higher priority (lower number) drawn LAST (appears on top)
                                     // So we reverse sort: draw taken (2) first, then scheduled (1), then pending (0) last
-                                    val sortedSlots = slotsWithStatus.sortedByDescending { it.second }
+                                    val sortedSlots = slotsWithStatusAndIndex.sortedByDescending { it.second }
 
                                     // Process each medication in this hour with generous vertical offset
-                                    sortedSlots.forEachIndexed { indexInHour, (slot, zPriority, isTakenStatus) ->
+                                    sortedSlots.forEach { (slot, zPriority, isTakenStatus, originalIndex) ->
                                         // Calculate horizontal position based on HOUR only within 2-hour block
                                         // First hour (startHour) -> left half (0-49dp), Second hour (endHour) -> right half (50-99dp)
                                         val isSecondHour = slot.hour == endHour
@@ -399,8 +400,8 @@ fun TimelineView(
                                         val baseYPosition = minutePositionRatio * (hourHeightDp / 2)  // Scale to 180dp (half the timeline)
 
                                         // Apply universal vertical stagger for ALL medications in this hour
-                                        // Each medication gets offset based on its index in the hour (0, 1, 2, 3...)
-                                        val yOffset = indexInHour * 20f  // Generous 20dp offset per medication
+                                        // Use originalIndex to maintain consistent vertical position regardless of status changes
+                                        val yOffset = originalIndex * 20f  // Generous 20dp offset per medication
                                         val position = baseYPosition + yOffset
 
                                         Column(

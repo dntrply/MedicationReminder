@@ -89,8 +89,45 @@ object PendingMedicationTracker {
 
     /**
      * Remove a medication from the pending list when user takes action
+     * Removes only the specific medication at the specified time
      */
-    fun removePendingMedication(context: Context, medicationId: Long) {
+    fun removePendingMedication(context: Context, medicationId: Long, hour: Int, minute: Int) {
+        val pending = getPendingMedications(context).toMutableList()
+
+        pending.removeAll {
+            it.medicationId == medicationId &&
+            it.hour == hour &&
+            it.minute == minute
+        }
+
+        val jsonArray = JSONArray()
+        pending.forEach { med ->
+            val jsonObj = JSONObject().apply {
+                put("medicationId", med.medicationId)
+                put("medicationName", med.medicationName)
+                put("medicationPhotoUri", med.medicationPhotoUri ?: "")
+                put("profileId", med.profileId)
+                put("hour", med.hour)
+                put("minute", med.minute)
+                put("timestamp", med.timestamp)
+                put("repeatCount", med.repeatCount)
+            }
+            jsonArray.put(jsonObj)
+        }
+
+        runBlocking {
+            context.userPrefs.edit { prefs ->
+                prefs[KEY_PENDING] = jsonArray.toString()
+            }
+        }
+        Log.d(TAG, "Removed pending medication ID: $medicationId at $hour:$minute, remaining: ${pending.size}")
+    }
+
+    /**
+     * Remove all pending medications for a specific medication ID (across all times)
+     * Used when deleting a medication
+     */
+    fun removePendingMedicationById(context: Context, medicationId: Long) {
         val pending = getPendingMedications(context).toMutableList()
 
         pending.removeAll { it.medicationId == medicationId }
@@ -115,7 +152,7 @@ object PendingMedicationTracker {
                 prefs[KEY_PENDING] = jsonArray.toString()
             }
         }
-        Log.d(TAG, "Removed pending medication ID: $medicationId, remaining: ${pending.size}")
+        Log.d(TAG, "Removed all pending medications for ID: $medicationId, remaining: ${pending.size}")
     }
 
     /**

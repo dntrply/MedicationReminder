@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.3] - 2025-11-02
+
+Critical bug fixes for Timeline view and medication tracking accuracy.
+
+### Fixed
+- **Timeline View Stacking Issue** - Medications now maintain correct vertical position after being marked as taken
+  - Previously, medications would hide behind others when status changed from pending to taken
+  - Vertical stagger now uses original time-based index instead of recalculated sort index
+  - Ensures consistent visual positioning regardless of medication status
+- **Pending Medication Tracker Specificity** - Fixed tracker to remove only specific time slots
+  - Previously removed ALL pending notifications for a medication ID
+  - Now correctly removes only the specific dose at the exact time (hour + minute)
+  - Prevents incorrect removal when same medication has multiple reminder times per day
+  - Improved data accuracy for multi-dose medications
+
+### Changed
+- Added `removePendingMedicationById()` function for cases requiring full medication removal (e.g., deletion)
+- Updated all notification action handlers to pass specific time parameters
+
+### Technical
+- Modified TimelineView.kt to preserve original index during status-based sorting
+- Updated PendingMedicationTracker.removePendingMedication() signature to include hour and minute
+- Added comprehensive test cases for gap detection in PendingMedicationTrackerTest
+- Fixed typo in MainActivity.kt (val pr= → val profile =)
+
+### Modified Files
+- app/src/main/java/com/medreminder/app/ui/TimelineView.kt - Fixed vertical stagger calculation
+- app/src/main/java/com/medreminder/app/notifications/PendingMedicationTracker.kt - Added time-specific removal
+- app/src/main/java/com/medreminder/app/notifications/ReminderBroadcastReceiver.kt - Updated removal calls
+- app/src/main/java/com/medreminder/app/ui/OutstandingMedicationsScreen.kt - Updated removal calls
+- app/src/main/java/com/medreminder/app/ui/MedicationViewModel.kt - Updated for medication deletion
+- app/src/test/java/com/medreminder/app/notifications/PendingMedicationTrackerTest.kt - Added test cases
+- app/build.gradle.kts - Version bump to 0.15.3
+
 ## [0.15.2] - 2025-11-02
 
 Infrastructure release adding comprehensive testing framework for gradual test coverage expansion.

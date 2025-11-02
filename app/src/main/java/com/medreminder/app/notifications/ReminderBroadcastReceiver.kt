@@ -465,8 +465,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(medicationId.toInt())
 
-        // Remove from pending tracker
-        PendingMedicationTracker.removePendingMedication(context, medicationId)
+        // Remove from pending tracker (specific time)
+        PendingMedicationTracker.removePendingMedication(context, medicationId, hour, minute)
 
         // Cancel grouped notification if exists
         val notificationId = (hour * 100) + minute
@@ -593,8 +593,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         // Cancel all pending repeat reminders
         NotificationScheduler.cancelRepeatingReminders(context, medicationId, hour, minute)
 
-        // Remove from pending tracker
-        PendingMedicationTracker.removePendingMedication(context, medicationId)
+        // Remove from pending tracker (specific time)
+        PendingMedicationTracker.removePendingMedication(context, medicationId, hour, minute)
 
         // Record as skipped in history database
         CoroutineScope(Dispatchers.IO).launch {

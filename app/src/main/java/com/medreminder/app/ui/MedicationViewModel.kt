@@ -148,8 +148,8 @@ class MedicationViewModel(application: Application) : AndroidViewModel(applicati
 
             // Delete from database
             medicationDao.deleteMedication(medication)
-            // Remove from pending medication tracker
-            PendingMedicationTracker.removePendingMedication(context, medication.id)
+            // Remove from pending medication tracker (all times)
+            PendingMedicationTracker.removePendingMedicationById(context, medication.id)
         }
     }
 

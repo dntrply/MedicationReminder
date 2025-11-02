@@ -155,7 +155,7 @@ fun OutstandingMedicationsScreen(
                                     medication = med,
                                     onMarkTaken = {
                                         // Remove from pending tracker immediately for instant UI update
-                                        PendingMedicationTracker.removePendingMedication(context, med.medicationId)
+                                        PendingMedicationTracker.removePendingMedication(context, med.medicationId, med.hour, med.minute)
                                         // Refresh list immediately
                                         allPendingMeds = PendingMedicationTracker.getPendingMedications(context)
                                         // Send broadcast for additional actions (notifications, history)
@@ -170,7 +170,7 @@ fun OutstandingMedicationsScreen(
                                     },
                                     onSnooze = {
                                         // Remove from pending tracker immediately
-                                        PendingMedicationTracker.removePendingMedication(context, med.medicationId)
+                                        PendingMedicationTracker.removePendingMedication(context, med.medicationId, med.hour, med.minute)
                                         // Refresh list immediately
                                         allPendingMeds = PendingMedicationTracker.getPendingMedications(context)
                                         // Send broadcast for snooze action
@@ -186,7 +186,7 @@ fun OutstandingMedicationsScreen(
                                     },
                                     onSkip = {
                                         // Remove from pending tracker immediately
-                                        PendingMedicationTracker.removePendingMedication(context, med.medicationId)
+                                        PendingMedicationTracker.removePendingMedication(context, med.medicationId, med.hour, med.minute)
                                         // Refresh list immediately
                                         allPendingMeds = PendingMedicationTracker.getPendingMedications(context)
                                         // Send broadcast for skip action

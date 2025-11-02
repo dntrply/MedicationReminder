@@ -99,3 +99,6 @@ medication_database.db
 *.db
 debug_export_*.json
 *.m4a
+
+# Issue tracking files (local only)
+.issue*

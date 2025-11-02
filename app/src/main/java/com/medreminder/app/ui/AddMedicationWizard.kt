@@ -484,7 +484,7 @@ fun AddMedicationStep2(
                                 )
                             ) {
                                 Icon(
-                                    imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                    imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.VolumeUp,
                                     contentDescription = null
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))

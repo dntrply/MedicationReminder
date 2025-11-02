@@ -154,7 +154,7 @@ fun MedicationCard(
                             modifier = Modifier.size(30.dp)
                         ) {
                             Icon(
-                                imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                                imageVector = if (isPlaying) Icons.Default.Stop else Icons.Default.VolumeUp,
                                 contentDescription = if (isPlaying) "Stop audio" else "Play audio",
                                 tint = androidx.compose.ui.graphics.Color(0xFF4A90E2),
                                 modifier = Modifier.size(30.dp)

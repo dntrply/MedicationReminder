@@ -29,6 +29,7 @@ import com.medreminder.app.R
 import com.medreminder.app.data.Medication
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.MedicationHistory
+import com.medreminder.app.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -430,6 +431,8 @@ fun HistoryEntryCard(
     currentLanguage: String,
     compact: Boolean = false
 ) {
+    val context = LocalContext.current
+
     val statusColor = when (history.action) {
         "TAKEN" -> if (history.wasOnTime) Color(0xFF4CAF50) else Color(0xFFFF9800)
         "SKIPPED" -> Color(0xFFFF5722)
@@ -451,13 +454,16 @@ fun HistoryEntryCard(
                 else -> "On time"
             }
         } else {
-            val lateMinutes = ((history.takenTime - history.scheduledTime) / (1000 * 60)).toInt()
-            when (currentLanguage) {
-                "hi" -> "$lateMinutes मिनट देरी"
-                "gu" -> "$lateMinutes મિનિટ મોડું"
-                "mr" -> "$lateMinutes मिनिटे उशीर"
-                else -> "Late by $lateMinutes min"
-            }
+            // Use TimeUtils for consistent formatting
+            val diffMillis = history.takenTime - history.scheduledTime
+            val isLate = diffMillis > 0
+
+            // Get formatted time difference (e.g., "15 minutes late" or "1 hour 30 minutes late")
+            val formattedDiff = TimeUtils.formatTimeDifference(diffMillis, context, isLate)
+
+            // For non-English languages, we still use the utility but may need translation
+            // For now, use English format for all languages (can be enhanced later with localization)
+            formattedDiff
         }
         "SKIPPED" -> when (currentLanguage) {
             "hi" -> "छोड़ दिया"

@@ -82,4 +82,12 @@ interface MedicationHistoryDao {
 
     @Query("DELETE FROM medication_history")
     suspend fun deleteAllHistory()
+
+    @Query("""
+        DELETE FROM medication_history
+        WHERE medicationId = :medicationId
+        AND scheduledTime = :scheduledTime
+        AND action = :action
+    """)
+    suspend fun deleteHistoryEntry(medicationId: Long, scheduledTime: Long, action: String)
 }

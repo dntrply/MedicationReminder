@@ -33,6 +33,8 @@ import com.medreminder.app.R
 import com.medreminder.app.data.Medication
 import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.notifications.PendingMedicationTracker
+import com.medreminder.app.utils.TimeUtils
+import com.medreminder.app.utils.AudioPlayer
 
 // Data class for timeline slots
 data class MedicationTimeSlot(
@@ -40,6 +42,9 @@ data class MedicationTimeSlot(
     val hour: Int,
     val minute: Int
 )
+
+// Helper data class for quadruple values
+data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 
 @Composable
 fun TimelineView(
@@ -692,159 +697,471 @@ fun MedicationActionPalette(
     currentLanguage: String = "en"
 ) {
     val context = LocalContext.current
+    val audioPlayer = remember { AudioPlayer(context) }
+    var isPlayingAudio by remember { mutableStateOf(false) }
+
+    // Clean up audio player when dialog is dismissed
+    DisposableEffect(Unit) {
+        onDispose {
+            audioPlayer.release()
+        }
+    }
+
+    // Get today's medication history to check if this dose was already skipped
+    val historyDao = remember(context) {
+        MedicationDatabase.getDatabase(context).historyDao()
+    }
+
+    // Calculate start and end of day
+    val (startOfDay, endOfDay) = remember {
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        calendar.set(java.util.Calendar.MILLISECOND, 0)
+        val start = calendar.timeInMillis
+
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+        val end = calendar.timeInMillis
+
+        start to end
+    }
+
+    val todayHistory by historyDao.getHistoryForDay(startOfDay, endOfDay)
+        .collectAsState(initial = emptyList())
+
+    // Check if this specific dose (medication + scheduled time) was already acted upon
+    val wasSkipped = remember(todayHistory, medication.id, hour, minute) {
+        todayHistory.any { history ->
+            val historyCal = java.util.Calendar.getInstance()
+            historyCal.timeInMillis = history.scheduledTime
+            history.medicationId == medication.id &&
+                historyCal.get(java.util.Calendar.HOUR_OF_DAY) == hour &&
+                historyCal.get(java.util.Calendar.MINUTE) == minute &&
+                history.action == "SKIPPED"
+        }
+    }
+
+    // Find the history entry if this dose was already taken
+    val takenHistoryEntry = remember(todayHistory, medication.id, hour, minute) {
+        todayHistory.firstOrNull { history ->
+            val historyCal = java.util.Calendar.getInstance()
+            historyCal.timeInMillis = history.scheduledTime
+            history.medicationId == medication.id &&
+                historyCal.get(java.util.Calendar.HOUR_OF_DAY) == hour &&
+                historyCal.get(java.util.Calendar.MINUTE) == minute &&
+                history.action == "TAKEN"
+        }
+    }
+
+    val wasTaken = takenHistoryEntry != null
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = {
-            if (medication.photoUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(Uri.parse(medication.photoUri)),
-                    contentDescription = medication.name,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Medication,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        },
-        title = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = medication.name,
-                    fontSize = 22.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = String.format("%02d:%02d %s",
-                        if (hour == 0) 12 else if (hour > 12) hour - 12 else hour,
-                        minute,
-                        if (hour >= 12) "PM" else "AM"
-                    ),
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        },
+        icon = null, // No icon for both states - large image will be in content
+        title = null, // No title - medication name will be in content
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Mark as Taken button
-                Button(
-                    onClick = {
-                        val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
-                            action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_MARK_TAKEN
-                            putExtra("MEDICATION_ID", medication.id)
-                            putExtra("MEDICATION_NAME", medication.name)
-                            putExtra("HOUR", hour)
-                            putExtra("MINUTE", minute)
-                        }
-                        context.sendBroadcast(intent)
-                        onDismiss()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                if (wasTaken && takenHistoryEntry != null) {
+                    // Calculate lateness for determining emoji/message
+                    val latenessInfo = TimeUtils.formatLateness(
+                        scheduledTime = takenHistoryEntry.scheduledTime,
+                        takenTime = takenHistoryEntry.takenTime,
+                        context = context,
+                        onTimeThresholdMinutes = 5
                     )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            stringResource(R.string.taken),
-                            fontSize = 18.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                        )
-                    }
-                }
+                    val diffMillis = takenHistoryEntry.takenTime - takenHistoryEntry.scheduledTime
+                    val wasOnTime = latenessInfo == null
 
-                // Snooze and Skip buttons in a row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
-                                action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_SNOOZE
-                                putExtra("MEDICATION_ID", medication.id)
-                                putExtra("MEDICATION_NAME", medication.name)
-                                putExtra("MEDICATION_PHOTO_URI", medication.photoUri)
-                                putExtra("HOUR", hour)
-                                putExtra("MINUTE", minute)
-                            }
-                            context.sendBroadcast(intent)
-                            onDismiss()
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                    ) {
-                        Text(
-                            stringResource(R.string.snooze),
-                            fontSize = 16.sp
-                        )
+                    // Choose emoji and message based on timing
+                    val (emoji, message, backgroundColor, textColor) = when {
+                        wasOnTime -> {
+                            // On time - celebratory!
+                            Quadruple("🎉", stringResource(R.string.taken_on_time_celebration),
+                                androidx.compose.ui.graphics.Color(0xFFE8F5E9),
+                                androidx.compose.ui.graphics.Color(0xFF2E7D32))
+                        }
+                        diffMillis > 0 -> {
+                            // Late - encouraging
+                            Quadruple("✅", stringResource(R.string.taken_better_late),
+                                androidx.compose.ui.graphics.Color(0xFFFFF3E0),
+                                androidx.compose.ui.graphics.Color(0xFFF57C00))
+                        }
+                        else -> {
+                            // Early - positive
+                            Quadruple("⭐", stringResource(R.string.taken_early_great),
+                                androidx.compose.ui.graphics.Color(0xFFE3F2FD),
+                                androidx.compose.ui.graphics.Color(0xFF1976D2))
+                        }
                     }
 
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
-                                action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_SKIP
-                                putExtra("MEDICATION_ID", medication.id)
-                                putExtra("MEDICATION_NAME", medication.name)
-                                putExtra("HOUR", hour)
-                                putExtra("MINUTE", minute)
-                            }
-                            context.sendBroadcast(intent)
-                            onDismiss()
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                    ) {
+                    // Visual-first design: Large medication image + emoji + simple message
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        // Close button at top-right
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = androidx.compose.ui.graphics.Color(0xFF666666),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                        // Medication name at top (since we removed title)
                         Text(
-                            stringResource(R.string.skip),
-                            fontSize = 16.sp
+                            text = medication.name,
+                            fontSize = 24.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            color = androidx.compose.ui.graphics.Color(0xFF333333)
                         )
-                    }
+
+                        // Extra large medication image (using space from removed thumbnail)
+                        Box(
+                            modifier = Modifier.size(180.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (medication.photoUri != null) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(Uri.parse(medication.photoUri)),
+                                    contentDescription = medication.name,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .border(
+                                            width = 4.dp,
+                                            color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                                            shape = RoundedCornerShape(20.dp)
+                                        ),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(androidx.compose.ui.graphics.Color(0xFFE8F5E9))
+                                        .border(
+                                            width = 4.dp,
+                                            color = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                                            shape = RoundedCornerShape(20.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Medication,
+                                        contentDescription = null,
+                                        tint = androidx.compose.ui.graphics.Color(0xFF4CAF50),
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                }
+                            }
+
+                            // Checkmark badge overlay at top-right (consistent with timeline view)
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 8.dp, y = (-8).dp)
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(androidx.compose.ui.graphics.Color(0xFF4CAF50))
+                                    .border(
+                                        width = 3.dp,
+                                        color = androidx.compose.ui.graphics.Color.White,
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Taken",
+                                    tint = androidx.compose.ui.graphics.Color.White,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+
+                        // Emoji + Encouraging message in a card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = backgroundColor
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Large emoji
+                                Text(
+                                    text = emoji,
+                                    fontSize = 48.sp,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                // Encouraging message
+                                Text(
+                                    text = message,
+                                    fontSize = 20.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = textColor,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                // Small subtitle with timing info (if not on time)
+                                if (!wasOnTime && latenessInfo != null) {
+                                    Text(
+                                        text = latenessInfo,
+                                        fontSize = 14.sp,
+                                        color = textColor.copy(alpha = 0.7f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                        } // End Column
+                    } // End Box
+                } else {
+                    // Show action buttons - same large image layout as "Already Taken"
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        // Close button at top-right
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = androidx.compose.ui.graphics.Color(0xFF666666),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Medication name at top
+                            Text(
+                                text = medication.name,
+                                fontSize = 24.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = androidx.compose.ui.graphics.Color(0xFF333333)
+                            )
+
+                            // Scheduled time with audio button
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = String.format("%02d:%02d %s",
+                                        if (hour == 0) 12 else if (hour > 12) hour - 12 else hour,
+                                        minute,
+                                        if (hour >= 12) "PM" else "AM"
+                                    ),
+                                    fontSize = 18.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                                )
+
+                                // Audio playback icon button (if medication has audio note)
+                                if (!medication.audioNotePath.isNullOrEmpty()) {
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    IconButton(
+                                        onClick = {
+                                            if (isPlayingAudio) {
+                                                audioPlayer.stop()
+                                                isPlayingAudio = false
+                                            } else {
+                                                val success = audioPlayer.play(
+                                                    audioPath = medication.audioNotePath,
+                                                    onCompletion = {
+                                                        isPlayingAudio = false
+                                                    },
+                                                    onError = {
+                                                        isPlayingAudio = false
+                                                    }
+                                                )
+                                                isPlayingAudio = success
+                                            }
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isPlayingAudio) Icons.Default.Stop else Icons.Default.VolumeUp,
+                                            contentDescription = if (isPlayingAudio) "Stop audio" else "Play audio",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Extra large medication image (more space since audio button moved)
+                            Box(
+                                modifier = Modifier.size(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (medication.photoUri != null) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(Uri.parse(medication.photoUri)),
+                                        contentDescription = medication.name,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .border(
+                                                width = 3.dp,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(20.dp)
+                                            ),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(MaterialTheme.colorScheme.primaryContainer)
+                                            .border(
+                                                width = 3.dp,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(20.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Medication,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(80.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Action buttons
+                            // Mark as Taken button
+                            Button(
+                                onClick = {
+                                    val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
+                                        action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_MARK_TAKEN
+                                        putExtra("MEDICATION_ID", medication.id)
+                                        putExtra("MEDICATION_NAME", medication.name)
+                                        putExtra("HOUR", hour)
+                                        putExtra("MINUTE", minute)
+                                    }
+                                    context.sendBroadcast(intent)
+                                    onDismiss()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        stringResource(R.string.taken),
+                                        fontSize = 18.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            // Snooze and Skip buttons in a row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
+                                            action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_SNOOZE
+                                            putExtra("MEDICATION_ID", medication.id)
+                                            putExtra("MEDICATION_NAME", medication.name)
+                                            putExtra("MEDICATION_PHOTO_URI", medication.photoUri)
+                                            putExtra("HOUR", hour)
+                                            putExtra("MINUTE", minute)
+                                        }
+                                        context.sendBroadcast(intent)
+                                        onDismiss()
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    enabled = !wasSkipped
+                                ) {
+                                    Text(
+                                        stringResource(R.string.snooze),
+                                        fontSize = 16.sp
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        val intent = Intent(context, com.medreminder.app.notifications.ReminderBroadcastReceiver::class.java).apply {
+                                            action = com.medreminder.app.notifications.ReminderBroadcastReceiver.ACTION_SKIP
+                                            putExtra("MEDICATION_ID", medication.id)
+                                            putExtra("MEDICATION_NAME", medication.name)
+                                            putExtra("HOUR", hour)
+                                            putExtra("MINUTE", minute)
+                                        }
+                                        context.sendBroadcast(intent)
+                                        onDismiss()
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    enabled = !wasSkipped,
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    ),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.skip),
+                                        fontSize = 16.sp
+                                    )
+                                }
+                            }
+                        } // End Column
+                    } // End Box
                 }
             }
         },
         confirmButton = {},
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    stringResource(R.string.cancel),
-                    fontSize = 16.sp
-                )
-            }
-        }
+        dismissButton = {} // No dismiss button - X button is in content for both states
     )
 }

@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2025-11-02
+
+Major UX overhaul with gamification, elderly-friendly timeline dialogs, audio playback controls, history correction, and consistent time formatting.
+
+### Added
+- **Gamification with encouraging messages** - Positive reinforcement when viewing already-taken medications
+  - 🎉 "Great job! Taken on time!" for timely doses
+  - ✅ "Better late than never!" for late doses
+  - ⭐ "Excellent! You're ahead!" for early doses
+  - Large emoji (48sp) with colored background cards for visual impact
+- **Audio playback in timeline action dialog** - Play medication audio notes directly from the action dialog
+  - Compact speaker icon (🔊) next to scheduled time
+  - Toggle between play and stop with single tap
+  - Automatic cleanup when dialog closes
+- **TimeUtils library** - Reusable time formatting utilities for consistent display across app
+  - `formatTimeDifference()` - Converts milliseconds to human-readable format
+  - `formatLateness()` - Automatically determines late/early/on-time status
+  - `formatTime12Hour()` - Converts 24-hour to 12-hour format with AM/PM
+- **History correction** - Users can correct mistakes by changing medication status
+  - Skip → Taken: Deletes SKIPPED entry, inserts TAKEN
+  - Taken → Skip: Deletes TAKEN entry, inserts SKIPPED
+  - Ensures only one final history entry per dose
+
+### Changed
+- **Timeline dialog redesign for elderly users** - Much larger medication images and clearer visual hierarchy
+  - Medication image enlarged from 80dp → 200dp (2.5x larger)
+  - Removed redundant thumbnail from dialog header
+  - Medication name increased to 24sp bold
+  - Scheduled time 18sp with medium weight
+  - Action buttons increased to 56dp height (from 52dp)
+  - All touch targets ≥ 48dp for accessibility compliance
+- **Checkmark position standardized** - Consistent top-right placement throughout app
+  - Already taken dialog: 48dp badge with 36dp icon at top-right
+  - Timeline view: 20dp badge at top-right
+  - Same green (#4CAF50) color and white icon everywhere
+- **Close button UX improvement** - X icon at top-right instead of Cancel button at bottom
+  - 40dp touch target with 24dp icon
+  - Gray (#666666) color for subtle appearance
+  - Applies to both "Already Taken" and "Action Needed" dialogs
+- **History time display improved** - Now shows hours and minutes instead of just minutes (fixes issue #6)
+  - "200 minutes late" → "3 hours 20 minutes late"
+  - "90 minutes late" → "1 hour 30 minutes late"
+  - Applied to both "By Date" and "By Medication" views
+- **Audio icon consistency** - Changed from PlayArrow (triangle) to VolumeUp (loudspeaker) everywhere
+  - Medication list view
+  - Add/Edit medication screen
+  - Timeline action dialog
+  - Clearer indication that audio content is available
+
+### Fixed
+- **Issue #11: Prevent duplicate skip/snooze after medication marked SKIPPED**
+  - Snooze and Skip buttons disabled when dose already skipped
+  - Prevents creating conflicting history entries
+- **Issue #6: Display snoozed time in hours instead of minutes in history**
+  - Long delays now display in hours and minutes format
+  - Much more readable for elderly users
+- **Duplicate history entries** - History correction prevents conflicting TAKEN/SKIPPED entries
+  - Only final outcome recorded, not button-click chronology
+  - Cleaner, more accurate medication history
+
+### Technical
+- New file: `app/src/main/java/com/medreminder/app/utils/TimeUtils.kt` (95 lines)
+- MedicationHistoryDao: Added `deleteHistoryEntry()` method for targeted deletion
+- ReminderBroadcastReceiver: Implements bidirectional history correction in `handleMarkTaken` and `handleSkip`
+- TimelineView: Major refactor with 443 net new lines
+  - Conditional dialog rendering (already taken vs action needed)
+  - Audio player integration with proper lifecycle management
+  - Large image layout with 200dp medication photos
+  - Gamification UI components
+- HistoryScreen: Integrated TimeUtils for consistent formatting
+- String resources: Added 16 new strings for gamification and time formatting
+- Version bump: 0.13.1 → 0.14.0 (versionCode 8 → 9)
+
 ## [0.13.1] - 2025-11-01
 
 Code organization and maintainability improvements through major refactoring.

@@ -494,6 +494,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 val takenTime = System.currentTimeMillis()
                 val scheduledTime = scheduledCalendar.timeInMillis
 
+                // Delete any existing SKIPPED entry for this dose (user is correcting their action)
+                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "SKIPPED")
+                Log.d(TAG, "Deleted any existing SKIPPED entry for $medicationName at $hour:$minute")
+
                 // Consider "on time" if taken within 30 minutes of scheduled time
                 val timeDiffMinutes = Math.abs(takenTime - scheduledTime) / (1000 * 60)
                 val wasOnTime = timeDiffMinutes <= 30
@@ -513,7 +517,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 )
 
                 historyDao.insertHistory(history)
-                Log.d(TAG, "Saved history for $medicationName at $hour:$minute")
+                Log.d(TAG, "Saved TAKEN history for $medicationName at $hour:$minute")
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving history", e)
             }
@@ -606,6 +610,11 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                     set(java.util.Calendar.SECOND, 0)
                     set(java.util.Calendar.MILLISECOND, 0)
                 }
+                val scheduledTime = scheduledCalendar.timeInMillis
+
+                // Delete any existing TAKEN entry for this dose (user is correcting their action)
+                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "TAKEN")
+                Log.d(TAG, "Deleted any existing TAKEN entry for $medicationName at $hour:$minute")
 
                 // Get medication to get profileId
                 val med = medicationDao.getMedicationById(medicationId)
@@ -615,14 +624,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                     profileId = profId,
                     medicationId = medicationId,
                     medicationName = medicationName,
-                    scheduledTime = scheduledCalendar.timeInMillis,
+                    scheduledTime = scheduledTime,
                     takenTime = System.currentTimeMillis(),
                     wasOnTime = false,
                     action = "SKIPPED"
                 )
 
                 historyDao.insertHistory(history)
-                Log.d(TAG, "Recorded skipped dose for $medicationName")
+                Log.d(TAG, "Recorded SKIPPED dose for $medicationName at $hour:$minute")
             } catch (e: Exception) {
                 Log.e(TAG, "Error recording skipped dose", e)
             }

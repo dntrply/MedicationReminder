@@ -99,6 +99,22 @@
     <string name="snooze">Snooze</string>
     <string name="skip">Skip</string>
 
+    <!-- Already Taken Status -->
+    <string name="already_taken">Already Taken</string>
+    <string name="taken_at">Taken at %1$s</string>
+    <string name="taken_on_time">On time</string>
+    <string name="taken_late_minutes">%1$d minutes late</string>
+    <string name="taken_late_hours_only">%1$d hour late</string>
+    <string name="taken_late_hours_minutes">%1$d hour %2$d minutes late</string>
+    <string name="taken_early_minutes">%1$d minutes early</string>
+    <string name="taken_early_hours_only">%1$d hour early</string>
+    <string name="taken_early_hours_minutes">%1$d hour %2$d minutes early</string>
+
+    <!-- Gamified/Encouraging Messages -->
+    <string name="taken_on_time_celebration">Great job! Taken on time!</string>
+    <string name="taken_better_late">Better late than never!</string>
+    <string name="taken_early_great">Excellent! You\'re ahead!</string>
+
     <!-- Notifications -->
     <string name="notification_channel_name">Medication Reminders</string>
     <string name="notification_channel_description">Reminders to take your medications</string>

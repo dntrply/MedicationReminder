@@ -53,6 +53,186 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         }
     }
 
+    // ========== Helper Functions ==========
+
+    /**
+     * Calculate grouped notification ID for a time slot
+     */
+    private fun getGroupedNotificationId(hour: Int, minute: Int): Int {
+        return (hour * 100) + minute
+    }
+
+    /**
+     * Cancel notifications for a medication (individual notification, grouped notification, and repeating reminders)
+     */
+    private fun cancelMedicationNotifications(
+        context: Context,
+        notificationManager: NotificationManager,
+        medicationId: Long,
+        hour: Int,
+        minute: Int
+    ) {
+        // Cancel individual notification
+        notificationManager.cancel(medicationId.toInt())
+
+        // Cancel grouped notification
+        notificationManager.cancel(getGroupedNotificationId(hour, minute))
+
+        // Cancel all pending repeat reminders
+        NotificationScheduler.cancelRepeatingReminders(context, medicationId, hour, minute)
+    }
+
+    /**
+     * Cancel notifications for all medications at a specific time
+     */
+    private fun cancelGroupedNotifications(
+        context: Context,
+        notificationManager: NotificationManager,
+        medications: List<PendingMedicationTracker.PendingMedication>,
+        hour: Int,
+        minute: Int
+    ) {
+        // Cancel all individual notifications and repeats
+        medications.forEach { med ->
+            notificationManager.cancel(med.medicationId.toInt())
+            NotificationScheduler.cancelRepeatingReminders(context, med.medicationId, hour, minute)
+        }
+
+        // Cancel the grouped notification
+        notificationManager.cancel(getGroupedNotificationId(hour, minute))
+    }
+
+    /**
+     * Record TAKEN action in history database for a single medication
+     */
+    private fun recordTakenHistory(
+        context: Context,
+        medicationId: Long,
+        medicationName: String,
+        profileId: Long,
+        hour: Int,
+        minute: Int
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val database = MedicationDatabase.getDatabase(context)
+                val historyDao = database.historyDao()
+
+                // Create scheduled time (the original reminder time)
+                val scheduledCalendar = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, hour)
+                    set(java.util.Calendar.MINUTE, minute)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+
+                // Current time (when actually taken)
+                val takenTime = System.currentTimeMillis()
+                val scheduledTime = scheduledCalendar.timeInMillis
+
+                // Delete any existing SKIPPED entry for this dose (user is correcting their action)
+                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "SKIPPED")
+                Log.d(TAG, "Deleted any existing SKIPPED entry for $medicationName at $hour:$minute")
+
+                // Consider "on time" if taken within 30 minutes of scheduled time
+                val timeDiffMinutes = Math.abs(takenTime - scheduledTime) / (1000 * 60)
+                val wasOnTime = timeDiffMinutes <= 30
+
+                val history = MedicationHistory(
+                    profileId = profileId,
+                    medicationId = medicationId,
+                    medicationName = medicationName,
+                    scheduledTime = scheduledTime,
+                    takenTime = takenTime,
+                    wasOnTime = wasOnTime,
+                    action = "TAKEN"
+                )
+
+                historyDao.insertHistory(history)
+                Log.d(TAG, "Saved TAKEN history for $medicationName at $hour:$minute")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving TAKEN history", e)
+            }
+        }
+    }
+
+    /**
+     * Record SKIPPED action in history database for a single medication
+     */
+    private fun recordSkippedHistory(
+        context: Context,
+        medicationId: Long,
+        medicationName: String,
+        profileId: Long,
+        hour: Int,
+        minute: Int
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val database = MedicationDatabase.getDatabase(context)
+                val historyDao = database.historyDao()
+
+                // Create scheduled time
+                val scheduledCalendar = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, hour)
+                    set(java.util.Calendar.MINUTE, minute)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+                val scheduledTime = scheduledCalendar.timeInMillis
+
+                // Delete any existing TAKEN entry for this dose (user is correcting their action)
+                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "TAKEN")
+                Log.d(TAG, "Deleted any existing TAKEN entry for $medicationName at $hour:$minute")
+
+                val history = MedicationHistory(
+                    profileId = profileId,
+                    medicationId = medicationId,
+                    medicationName = medicationName,
+                    scheduledTime = scheduledTime,
+                    takenTime = System.currentTimeMillis(),
+                    wasOnTime = false,
+                    action = "SKIPPED"
+                )
+
+                historyDao.insertHistory(history)
+                Log.d(TAG, "Recorded SKIPPED dose for $medicationName at $hour:$minute")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error recording SKIPPED history", e)
+            }
+        }
+    }
+
+    /**
+     * Show a brief confirmation notification
+     */
+    private fun showConfirmation(
+        context: Context,
+        notificationManager: NotificationManager,
+        titleResId: Int,
+        message: String,
+        notificationId: Int
+    ) {
+        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID_PRIVATE)
+            .setSmallIcon(R.drawable.ic_notification_medication)
+            .setContentTitle(context.getString(titleResId))
+            .setContentText(message)
+            .apply {
+                // Use BigTextStyle for longer messages
+                if (message.length > 40) {
+                    setStyle(NotificationCompat.BigTextStyle().bigText(message))
+                }
+            }
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setAutoCancel(true)
+            .setTimeoutAfter(3000) // Auto-dismiss after 3 seconds
+            .build()
+
+        notificationManager.notify(notificationId, confirmationNotification)
+    }
+
+    // ========== Notification Display ==========
+
     private fun showNotification(context: Context, intent: Intent) {
         val medicationId = intent.getLongExtra("MEDICATION_ID", -1)
         val medicationName = intent.getStringExtra("MEDICATION_NAME") ?: "Medication"
@@ -461,80 +641,35 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Mark as taken: $medicationName")
 
-        // Cancel the notification
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(medicationId.toInt())
 
-        // Remove from pending tracker (specific time)
+        // Cancel notifications
+        cancelMedicationNotifications(context, notificationManager, medicationId, hour, minute)
+
+        // Remove from pending tracker
         PendingMedicationTracker.removePendingMedication(context, medicationId, hour, minute)
 
-        // Cancel grouped notification if exists
-        val notificationId = (hour * 100) + minute
-        notificationManager.cancel(notificationId)
-
-        // Cancel all pending repeat reminders
-        NotificationScheduler.cancelRepeatingReminders(context, medicationId, hour, minute)
-
-        // Record in history database
+        // Get profileId and record history
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val database = MedicationDatabase.getDatabase(context)
-                val historyDao = database.historyDao()
-                val medicationDao = database.medicationDao()
+                val medication = database.medicationDao().getMedicationById(medicationId)
+                val profileId = medication?.profileId ?: 1L
 
-                // Create scheduled time (the original reminder time)
-                val scheduledCalendar = java.util.Calendar.getInstance().apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, hour)
-                    set(java.util.Calendar.MINUTE, minute)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }
-
-                // Current time (when actually taken)
-                val takenTime = System.currentTimeMillis()
-                val scheduledTime = scheduledCalendar.timeInMillis
-
-                // Delete any existing SKIPPED entry for this dose (user is correcting their action)
-                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "SKIPPED")
-                Log.d(TAG, "Deleted any existing SKIPPED entry for $medicationName at $hour:$minute")
-
-                // Consider "on time" if taken within 30 minutes of scheduled time
-                val timeDiffMinutes = Math.abs(takenTime - scheduledTime) / (1000 * 60)
-                val wasOnTime = timeDiffMinutes <= 30
-
-                // Get medication to get profileId
-                val med = medicationDao.getMedicationById(medicationId)
-                val profId = med?.profileId ?: 1L
-
-                val history = MedicationHistory(
-                    profileId = profId,
-                    medicationId = medicationId,
-                    medicationName = medicationName,
-                    scheduledTime = scheduledTime,
-                    takenTime = takenTime,
-                    wasOnTime = wasOnTime,
-                    action = "TAKEN"
-                )
-
-                historyDao.insertHistory(history)
-                Log.d(TAG, "Saved TAKEN history for $medicationName at $hour:$minute")
+                recordTakenHistory(context, medicationId, medicationName, profileId, hour, minute)
             } catch (e: Exception) {
-                Log.e(TAG, "Error saving history", e)
+                Log.e(TAG, "Error getting medication for history", e)
             }
         }
 
-        // Show a brief confirmation
-        val channelId = CHANNEL_ID_PRIVATE
-        val confirmationNotification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.marked_as_taken))
-            .setContentText(medicationName)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setAutoCancel(true)
-            .setTimeoutAfter(3000) // Auto-dismiss after 3 seconds
-            .build()
-
-        notificationManager.notify(medicationId.toInt() + 9000, confirmationNotification)
+        // Show confirmation
+        showConfirmation(
+            context,
+            notificationManager,
+            R.string.marked_as_taken,
+            medicationName,
+            medicationId.toInt() + 9000
+        )
     }
 
     private fun handleSnooze(context: Context, intent: Intent) {
@@ -546,12 +681,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Snooze: $medicationName")
 
-        // Cancel current notification
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(medicationId.toInt())
 
-        // Cancel all pending repeat reminders
-        NotificationScheduler.cancelRepeatingReminders(context, medicationId, hour, minute)
+        // Cancel notifications
+        cancelMedicationNotifications(context, notificationManager, medicationId, hour, minute)
 
         // Reschedule for 10 minutes later (as repeat #0, starting fresh)
         NotificationScheduler.scheduleRepeatingReminder(
@@ -564,18 +697,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             repeatCount = 0
         )
 
-        // Show a brief confirmation
-        val channelId = CHANNEL_ID_PRIVATE
-        val confirmationNotification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.reminder_snoozed))
-            .setContentText(medicationName)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setAutoCancel(true)
-            .setTimeoutAfter(3000)
-            .build()
-
-        notificationManager.notify(medicationId.toInt() + 9000, confirmationNotification)
+        // Show confirmation
+        showConfirmation(
+            context,
+            notificationManager,
+            R.string.reminder_snoozed,
+            medicationName,
+            medicationId.toInt() + 9000
+        )
     }
 
     private fun handleSkip(context: Context, intent: Intent) {
@@ -586,69 +715,35 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Skip dose: $medicationName")
 
-        // Cancel current notification
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(medicationId.toInt())
 
-        // Cancel all pending repeat reminders
-        NotificationScheduler.cancelRepeatingReminders(context, medicationId, hour, minute)
+        // Cancel notifications
+        cancelMedicationNotifications(context, notificationManager, medicationId, hour, minute)
 
-        // Remove from pending tracker (specific time)
+        // Remove from pending tracker
         PendingMedicationTracker.removePendingMedication(context, medicationId, hour, minute)
 
-        // Record as skipped in history database
+        // Get profileId and record history
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val database = MedicationDatabase.getDatabase(context)
-                val historyDao = database.historyDao()
-                val medicationDao = database.medicationDao()
+                val medication = database.medicationDao().getMedicationById(medicationId)
+                val profileId = medication?.profileId ?: 1L
 
-                // Create scheduled time
-                val scheduledCalendar = java.util.Calendar.getInstance().apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, hour)
-                    set(java.util.Calendar.MINUTE, minute)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }
-                val scheduledTime = scheduledCalendar.timeInMillis
-
-                // Delete any existing TAKEN entry for this dose (user is correcting their action)
-                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "TAKEN")
-                Log.d(TAG, "Deleted any existing TAKEN entry for $medicationName at $hour:$minute")
-
-                // Get medication to get profileId
-                val med = medicationDao.getMedicationById(medicationId)
-                val profId = med?.profileId ?: 1L
-
-                val history = MedicationHistory(
-                    profileId = profId,
-                    medicationId = medicationId,
-                    medicationName = medicationName,
-                    scheduledTime = scheduledTime,
-                    takenTime = System.currentTimeMillis(),
-                    wasOnTime = false,
-                    action = "SKIPPED"
-                )
-
-                historyDao.insertHistory(history)
-                Log.d(TAG, "Recorded SKIPPED dose for $medicationName at $hour:$minute")
+                recordSkippedHistory(context, medicationId, medicationName, profileId, hour, minute)
             } catch (e: Exception) {
-                Log.e(TAG, "Error recording skipped dose", e)
+                Log.e(TAG, "Error getting medication for history", e)
             }
         }
 
-        // Show a brief confirmation
-        val channelId = CHANNEL_ID_PRIVATE
-        val confirmationNotification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.dose_skipped))
-            .setContentText(medicationName)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setAutoCancel(true)
-            .setTimeoutAfter(3000)
-            .build()
-
-        notificationManager.notify(medicationId.toInt() + 9000, confirmationNotification)
+        // Show confirmation
+        showConfirmation(
+            context,
+            notificationManager,
+            R.string.dose_skipped,
+            medicationName,
+            medicationId.toInt() + 9000
+        )
     }
 
     private fun handleMarkAllTaken(context: Context, intent: Intent) {
@@ -660,33 +755,26 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val medications = PendingMedicationTracker.getPendingMedicationsAtTime(context, hour, minute)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Cancel all notifications and repeats for these medications
-        medications.forEach { med ->
-            notificationManager.cancel(med.medicationId.toInt())
-            NotificationScheduler.cancelRepeatingReminders(context, med.medicationId, hour, minute)
-        }
-
-        // Cancel the grouped notification
-        val notificationId = (hour * 100) + minute
-        notificationManager.cancel(notificationId)
+        // Cancel all notifications
+        cancelGroupedNotifications(context, notificationManager, medications, hour, minute)
 
         // Remove all from pending tracker
         PendingMedicationTracker.removePendingMedicationsAtTime(context, hour, minute)
 
+        // Record history for each medication
+        medications.forEach { med ->
+            recordTakenHistory(context, med.medicationId, med.medicationName, med.profileId, hour, minute)
+        }
+
         // Show confirmation
         val medicationNames = medications.joinToString(", ") { it.medicationName }
-        val channelId = CHANNEL_ID_PRIVATE
-        val confirmationNotification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.marked_as_taken))
-            .setContentText(medicationNames)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(medicationNames))
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setAutoCancel(true)
-            .setTimeoutAfter(3000)
-            .build()
-
-        notificationManager.notify(notificationId + 90000, confirmationNotification)
+        showConfirmation(
+            context,
+            notificationManager,
+            R.string.marked_as_taken,
+            medicationNames,
+            getGroupedNotificationId(hour, minute) + 90000
+        )
     }
 
     private fun handleSnoozeAll(context: Context, intent: Intent) {
@@ -698,15 +786,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val medications = PendingMedicationTracker.getPendingMedicationsAtTime(context, hour, minute)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Cancel current notifications and repeats
-        medications.forEach { med ->
-            notificationManager.cancel(med.medicationId.toInt())
-            NotificationScheduler.cancelRepeatingReminders(context, med.medicationId, hour, minute)
-        }
-
-        // Cancel the grouped notification
-        val notificationId = (hour * 100) + minute
-        notificationManager.cancel(notificationId)
+        // Cancel all notifications
+        cancelGroupedNotifications(context, notificationManager, medications, hour, minute)
 
         // Remove from pending tracker
         PendingMedicationTracker.removePendingMedicationsAtTime(context, hour, minute)
@@ -726,17 +807,13 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         // Show confirmation
         val medicationNames = medications.joinToString(", ") { it.medicationName }
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID_PRIVATE)
-            .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.reminder_snoozed))
-            .setContentText(medicationNames)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(medicationNames))
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setAutoCancel(true)
-            .setTimeoutAfter(3000)
-            .build()
-
-        notificationManager.notify(notificationId + 90000, confirmationNotification)
+        showConfirmation(
+            context,
+            notificationManager,
+            R.string.reminder_snoozed,
+            medicationNames,
+            getGroupedNotificationId(hour, minute) + 90000
+        )
     }
 
     private fun handleSkipAll(context: Context, intent: Intent) {
@@ -748,32 +825,26 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val medications = PendingMedicationTracker.getPendingMedicationsAtTime(context, hour, minute)
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Cancel all notifications and repeats
-        medications.forEach { med ->
-            notificationManager.cancel(med.medicationId.toInt())
-            NotificationScheduler.cancelRepeatingReminders(context, med.medicationId, hour, minute)
-        }
-
-        // Cancel the grouped notification
-        val notificationId = (hour * 100) + minute
-        notificationManager.cancel(notificationId)
+        // Cancel all notifications
+        cancelGroupedNotifications(context, notificationManager, medications, hour, minute)
 
         // Remove from pending tracker
         PendingMedicationTracker.removePendingMedicationsAtTime(context, hour, minute)
 
+        // Record history for each medication
+        medications.forEach { med ->
+            recordSkippedHistory(context, med.medicationId, med.medicationName, med.profileId, hour, minute)
+        }
+
         // Show confirmation
         val medicationNames = medications.joinToString(", ") { it.medicationName }
-        val confirmationNotification = NotificationCompat.Builder(context, CHANNEL_ID_PRIVATE)
-            .setSmallIcon(R.drawable.ic_notification_medication)
-            .setContentTitle(context.getString(R.string.dose_skipped))
-            .setContentText(medicationNames)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(medicationNames))
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setAutoCancel(true)
-            .setTimeoutAfter(3000)
-            .build()
-
-        notificationManager.notify(notificationId + 90000, confirmationNotification)
+        showConfirmation(
+            context,
+            notificationManager,
+            R.string.dose_skipped,
+            medicationNames,
+            getGroupedNotificationId(hour, minute) + 90000
+        )
     }
 
     private fun createNotificationChannels(context: Context) {

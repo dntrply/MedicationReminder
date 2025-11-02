@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.4] - 2025-11-02
+
+Critical bug fix for grouped notification actions and major code refactoring for improved maintainability.
+
+### Fixed
+- **Grouped Notification History Recording** - Fixed "I've taken all" and "Skip all" buttons not updating medication status
+  - Previously, clicking these buttons on grouped notifications (multiple medications at same time) would dismiss notifications but not record actions in history
+  - Now properly records TAKEN or SKIPPED entries for each medication in the group
+  - Fixes issue where home screen would still show medications as pending after acknowledging grouped notification
+  - Both "I've taken all" and "Skip all" now create proper history entries with correct timestamps and on-time calculations
+
+### Changed
+- **Comprehensive Code Refactoring** - Extracted duplicate code into reusable helper functions
+  - Created 5 helper functions to eliminate ~250 lines of duplicate code across notification handlers
+  - Reduced handler functions from 400+ lines to ~150 lines total (-60% code reduction)
+  - All notification actions now use consistent, centralized logic for cancellation and history recording
+  - Improved code maintainability - changes to notification/history behavior now happen in one place
+
+### Technical
+- Added helper functions: `getGroupedNotificationId()`, `cancelMedicationNotifications()`, `cancelGroupedNotifications()`, `recordTakenHistory()`, `recordSkippedHistory()`, `showConfirmation()`
+- Refactored 6 handler functions: `handleMarkTaken()`, `handleSkip()`, `handleSnooze()`, `handleMarkAllTaken()`, `handleSkipAll()`, `handleSnoozeAll()`
+- Version bump to 0.15.4
+
+### Modified Files
+- app/src/main/java/com/medreminder/app/notifications/ReminderBroadcastReceiver.kt - Fixed grouped notification history recording and refactored all handlers
+- app/build.gradle.kts - Version bump to 0.15.4
+
 ## [0.15.3] - 2025-11-02
 
 Critical bug fixes for Timeline view and medication tracking accuracy.

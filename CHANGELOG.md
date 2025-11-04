@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2025-11-04
+
+Critical bug fix release addressing incorrect medication status tracking and reporting display issues.
+
+### Fixed
+- **Premature MISSED Status** - Fixed medications being marked as MISSED immediately when scheduled time arrives
+  - Added 4-hour grace period (2 hours overdue threshold + 2 hours overdue window) before marking doses as missed
+  - Users now have proper time window to take medications without incorrect MISSED entries
+  - Prevents data pollution from premature status changes
+
+- **Pending Medications Marked as MISSED** - Fixed gap scanning incorrectly marking active pending medications
+  - Gap period scanning now excludes medications with active notifications from being marked as MISSED
+  - Resolved issue where medications were marked MISSED within minutes despite having pending notifications
+  - Ensures only truly missed doses (past the 4-hour window) are recorded as MISSED
+
+- **Reports Calendar Display Issue** - Fixed calendar showing dark gray instead of green for completed days
+  - Calendar now correctly checks medication existence against end of day (11:59 PM) instead of noon
+  - Resolves issue where medications created after noon on same day weren't counted as "active"
+  - Days with all medications taken now properly display in green
+
+- **Reports Trends Display Issue** - Fixed trends graph showing "0% great!" despite taken medications
+  - Trends calculation now uses end-of-day check matching calendar fix
+  - Ensures same-day medication creation and completion is properly tracked
+  - Adherence percentages now accurately reflect actual medication adherence
+
+### Technical
+- Modified `MissedDoseCalculator.kt` to implement 4-hour grace period before marking missed doses
+- Updated `PendingMedicationTracker.kt` gap scanning to exclude pending medications from MISSED status
+- Fixed `ReportsScreen.kt` medication active date checks in both calendar and trends calculations
+- All fixes ensure data integrity and accurate reporting for same-day medication management
+
 ## [0.17.0] - 2025-11-04
 
 Language expansion and gamification enhancement release adding Hinglish language support and encouraging messages across all languages.

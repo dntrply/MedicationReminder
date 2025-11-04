@@ -808,8 +808,17 @@ fun calculateDayAdherenceState(
     includeSkipped: Boolean = false
 ): DayAdherenceState {
     // Filter medications that existed on this day
+    // Check against end of day to include medications created any time during the day
+    val endOfDay = java.util.Calendar.getInstance().apply {
+        timeInMillis = dayTimestamp
+        set(java.util.Calendar.HOUR_OF_DAY, 23)
+        set(java.util.Calendar.MINUTE, 59)
+        set(java.util.Calendar.SECOND, 59)
+        set(java.util.Calendar.MILLISECOND, 999)
+    }.timeInMillis
+
     val activeMedications = medications.filter { med ->
-        med.createdAt <= dayTimestamp
+        med.createdAt <= endOfDay
     }
 
     if (activeMedications.isEmpty()) {
@@ -1338,8 +1347,17 @@ fun calculateDailyAdherence(
         val dayTimestamp = dayCal.timeInMillis
 
         // Filter medications that existed on this day
+        // Check against end of day to include medications created any time during the day
+        val endOfDay = java.util.Calendar.getInstance().apply {
+            timeInMillis = dayTimestamp
+            set(java.util.Calendar.HOUR_OF_DAY, 23)
+            set(java.util.Calendar.MINUTE, 59)
+            set(java.util.Calendar.SECOND, 59)
+            set(java.util.Calendar.MILLISECOND, 999)
+        }.timeInMillis
+
         val activeMedications = medications.filter { med ->
-            med.createdAt <= dayTimestamp
+            med.createdAt <= endOfDay
         }
 
         if (activeMedications.isEmpty()) {

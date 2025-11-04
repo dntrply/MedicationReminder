@@ -10,6 +10,13 @@ import java.util.*
  */
 object MissedDoseCalculator {
 
+    // A medication becomes OVERDUE 2 hours after its scheduled time
+    private const val OVERDUE_THRESHOLD_HOURS = 2
+    // A medication is removed from OVERDUE (and marked MISSED) 2 hours after becoming overdue
+    // Total time from scheduled: 2 hours (threshold) + 2 hours (window) = 4 hours
+    private const val OVERDUE_WINDOW_HOURS = 2
+    private const val TOTAL_MISSED_THRESHOLD_HOURS = OVERDUE_THRESHOLD_HOURS + OVERDUE_WINDOW_HOURS // 4 hours total
+
     /**
      * Calculate missed doses for a given date range
      * Returns list of virtual MedicationHistory entries with action="MISSED"
@@ -22,8 +29,10 @@ object MissedDoseCalculator {
     ): List<MedicationHistory> {
         val missedDoses = mutableListOf<MedicationHistory>()
 
-        // Get current time to avoid marking future doses as missed
+        // Get current time to avoid marking doses as missed too early
         val now = System.currentTimeMillis()
+        // Only mark as missed if past the total threshold (4 hours after scheduled time)
+        val missedThreshold = TOTAL_MISSED_THRESHOLD_HOURS * 60 * 60 * 1000L
 
         // For each day in the range
         val startCal = Calendar.getInstance().apply { timeInMillis = startTime }
@@ -61,13 +70,18 @@ object MissedDoseCalculator {
                     // Skip if this is in the future (not yet time to take it)
                     if (scheduledTimestamp > now) continue
 
+                    // Skip if not enough time has passed to mark as missed
+                    // Give the user the full overdue window (4 hours) before marking as missed
+                    val timeSinceScheduled = now - scheduledTimestamp
+                    if (timeSinceScheduled < missedThreshold) continue
+
                     // Check if there's a history entry for this medication at this time
                     val hasHistoryEntry = existingHistory.any { history ->
                         history.medicationId == medication.id &&
                         isSameScheduledTime(history.scheduledTime, scheduledTimestamp)
                     }
 
-                    // If no history entry, this is a missed dose
+                    // If no history entry and past the missed threshold, this is a missed dose
                     if (!hasHistoryEntry) {
                         missedDoses.add(
                             MedicationHistory(

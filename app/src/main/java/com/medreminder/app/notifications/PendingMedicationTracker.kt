@@ -393,7 +393,8 @@ object PendingMedicationTracker {
                     medication = medication,
                     gapStart = gapStart,
                     gapEnd = now,
-                    existingHistory = existingHistory
+                    existingHistory = existingHistory,
+                    currentPendingMedications = pending
                 )
 
                 // Add to missed medications list for recording
@@ -490,7 +491,8 @@ object PendingMedicationTracker {
         medication: com.medreminder.app.data.Medication,
         gapStart: Long,
         gapEnd: Long,
-        existingHistory: List<com.medreminder.app.data.MedicationHistory>
+        existingHistory: List<com.medreminder.app.data.MedicationHistory>,
+        currentPendingMedications: List<PendingMedication>
     ): List<Triple<Long, Int, Int>> {
         val missedDoses = mutableListOf<Triple<Long, Int, Int>>()
 
@@ -555,7 +557,15 @@ object PendingMedicationTracker {
                         isSameScheduledTime(history.scheduledTime, scheduledTimestamp)
                     }
 
-                    if (!hasHistory) {
+                    // Check if this medication is currently pending (has an active notification)
+                    val isPending = currentPendingMedications.any { pending ->
+                        pending.medicationId == medication.id &&
+                        pending.hour == scheduledTime.hour &&
+                        pending.minute == scheduledTime.minute
+                    }
+
+                    // Only mark as missed if there's no history AND it's not currently pending
+                    if (!hasHistory && !isPending) {
                         missedDoses.add(Triple(scheduledTimestamp, scheduledTime.hour, scheduledTime.minute))
                     }
                 }

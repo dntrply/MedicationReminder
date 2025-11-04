@@ -105,6 +105,11 @@ fun SettingsScreen(
                     onClick = { onLanguageChange("en") }
                 )
                 LanguageOptionCard(
+                    label = "Hinglish (हिंग्लिश)",
+                    selected = currentLanguage == "en-rIN",
+                    onClick = { onLanguageChange("en-rIN") }
+                )
+                LanguageOptionCard(
                     label = "हिन्दी",
                     selected = currentLanguage == "hi",
                     onClick = { onLanguageChange("hi") }

@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Medication Reminder</string>
+
+    <!-- Home Screen -->
+    <string name="home_title">Medication Reminder</string>
+    <string name="no_medications">Abhi tak koi medicine nahi hai</string>
+    <string name="add_first_medication">Apni pehli medicine add karne ke liye + press karo</string>
+    <string name="add_medication">Medicine Add Karo</string>
+
+    <!-- Welcome Screen Features -->
+    <string name="feature_schedule">Schedule &amp; Track Karo</string>
+    <string name="feature_notify">Smart Reminders</string>
+    <string name="feature_history">History Dekho</string>
+    <string name="today">Aaj</string>
+    <string name="next_reminder">Next: %s</string>
+    <string name="last_taken">Last liya: %s</string>
+    <string name="taken_today">Liya: Aaj %s</string>
+
+    <!-- Add/Edit Medication -->
+    <string name="medication_name">Medicine ka Naam</string>
+    <string name="medication_name_hint">Jaise: Aspirin</string>
+    <string name="medication_name_required">Medicine ka naam zaroori hai</string>
+    <string name="photo">Photo</string>
+    <string name="add_photo">Photo Add Karo</string>
+    <string name="take_photo">Photo Lo</string>
+    <string name="choose_from_gallery">Gallery se Choose Karo</string>
+    <string name="dosage_instructions">Dose / Instructions</string>
+    <string name="dosage_hint">Jaise: 1 tablet</string>
+    <string name="notes">Notes (Optional)</string>
+    <string name="notes_hint">Jaise: Khane ke saath lo</string>
+    <string name="next">Next</string>
+    <string name="save">Save Karo</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit_medication">Medicine Edit Karo</string>
+
+    <!-- Audio Notes -->
+    <string name="audio_note">Audio Note</string>
+    <string name="add_audio_note">Audio Note Add Karo</string>
+    <string name="record_audio">Audio Record Karo</string>
+    <string name="recording">Recording chal rahi hai…</string>
+    <string name="stop_recording">Recording Band Karo</string>
+    <string name="play_audio">Audio Sunao</string>
+    <string name="stop_playback">Playback Band Karo</string>
+    <string name="delete_audio">Audio Note Delete Karo</string>
+    <string name="audio_instructions">Instructions record karo (max 60 seconds)</string>
+    <string name="audio_note_hint">Jaise: Nashte se pehle lo</string>
+    <string name="recording_time">Recording: %s</string>
+    <string name="audio_duration">Duration: %s</string>
+    <string name="has_audio_note">Audio instructions hain</string>
+
+    <!-- Medication Times -->
+    <string name="set_reminder_times">Kab Lena Hai</string>
+    <string name="when_remind">Aap ise kab lete ho?</string>
+    <string name="add_another_time">Ek Aur Time Add Karo</string>
+    <string name="repeat_on">Repeat karo:</string>
+    <string name="time_required">Kam se kam ek time zaroori hai</string>
+
+    <!-- Days of week -->
+    <string name="monday">M</string>
+    <string name="tuesday">T</string>
+    <string name="wednesday">W</string>
+    <string name="thursday">T</string>
+    <string name="friday">F</string>
+    <string name="saturday">S</string>
+    <string name="sunday">S</string>
+    <string name="monday_full">Monday</string>
+    <string name="tuesday_full">Tuesday</string>
+    <string name="wednesday_full">Wednesday</string>
+    <string name="thursday_full">Thursday</string>
+    <string name="friday_full">Friday</string>
+    <string name="saturday_full">Saturday</string>
+    <string name="sunday_full">Sunday</string>
+
+    <!-- Reminder Screen -->
+    <string name="medication_reminder">Medicine Reminder</string>
+    <string name="time_to_take">%s lene ka time ho gaya</string>
+    <string name="time_to_take_multiple">%d medicines lene ka time</string>
+    <string name="scheduled_for">Scheduled: %s</string>
+    <string name="ive_taken_it">Maine Le Liya</string>
+    <string name="ive_taken_all">Maine Sab Le Liya</string>
+    <string name="remind_me_later">10 Min Mein Yaad Dilao</string>
+    <string name="remind_in_minutes">%1$d min mein yaad dilao</string>
+    <string name="snooze_all">Sab Ko Snooze Karo</string>
+    <string name="skip_dose">Skip Karo</string>
+    <string name="skip_all">Sab Skip Karo</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="marked_as_taken">Liya hua mark kar diya</string>
+    <string name="reminder_snoozed">Reminder 10 minutes ke liye snooze ho gaya</string>
+    <string name="dose_skipped">Dose skip kar diya</string>
+
+    <!-- Take Medications Screen -->
+    <string name="take_medications_now">Abhi Medicines Lo</string>
+    <string name="no_pending_medications">Koi pending medicines nahi hain</string>
+    <string name="back_to_home">Home Pe Wapas Jao</string>
+    <string name="or_take_action_on_all">Ya sab pe action lo:</string>
+    <string name="taken">Liya</string>
+    <string name="snooze">Snooze</string>
+    <string name="skip">Skip</string>
+
+    <!-- Already Taken Status -->
+    <string name="already_taken">Pehle Hi Liya Hai</string>
+    <string name="taken_at">%1$s pe liya</string>
+    <string name="taken_on_time">Time pe</string>
+    <string name="taken_late_minutes">%1$d minutes late</string>
+    <string name="taken_late_hours_only">%1$d hour late</string>
+    <string name="taken_late_hours_minutes">%1$d hour %2$d minutes late</string>
+    <string name="taken_early_minutes">%1$d minutes pehle</string>
+    <string name="taken_early_hours_only">%1$d hour pehle</string>
+    <string name="taken_early_hours_minutes">%1$d hour %2$d minutes pehle</string>
+
+    <!-- Gamified/Encouraging Messages -->
+    <string name="taken_on_time_celebration">Bahut badhiya! Time pe liya! 🌟</string>
+    <string name="taken_better_late">Late ho gaya lekin chalta hai! 💪</string>
+    <string name="taken_early_great">Kamaal! Aap aage hain! 🏆</string>
+    <string name="medication_skipped">Aapne ye medicine skip kar di</string>
+    <string name="awesome_streak">Awesome! Mast chal raha hai! ✨</string>
+    <string name="keep_it_up">Aise hi karte raho, champ! 🎯</string>
+    <string name="health_hero">Aap health ke hero ho! 💊</string>
+    <string name="fantastic_work">Zabardast kaam! 🌈</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Medicine Reminders</string>
+    <string name="notification_channel_description">Apni medicines lene ke reminders</string>
+    <string name="notification_title">%s lene ka time</string>
+    <string name="notification_text">%s</string>
+    <string name="multiple_medications">%d medicines ka time</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="notification_sound">Notification Sound</string>
+    <string name="snooze_duration">Snooze Duration</string>
+    <string name="about">About</string>
+    <string name="no_schedule">Koi schedule set nahi hai</string>
+
+    <!-- Confirmations -->
+    <string name="delete_medication_title">Medicine Delete Karein?</string>
+    <string name="delete_medication_message">Kya aap %s ko delete karna chahte hain? Saare reminders aur history bhi remove ho jayenge.</string>
+    <string name="delete_confirm">Delete Karo</string>
+
+    <!-- Permissions -->
+    <string name="camera_permission_required">Photo lene ke liye camera permission chahiye</string>
+    <string name="notification_permission_required">Reminders ke liye notification permission chahiye</string>
+    <string name="grant_permission">Permission Do</string>
+
+    <!-- Errors -->
+    <string name="error_saving_medication">Medicine save karne mein error</string>
+    <string name="error_loading_medications">Medicines load karne mein error</string>
+    <string name="error_taking_photo">Photo lene mein error</string>
+
+    <!-- Content Descriptions (Accessibility) -->
+    <string name="medication_photo">Medicine ki photo</string>
+    <string name="delete_time">Is reminder time ko delete karo</string>
+    <string name="medication_taken_indicator">Aaj medicine li gayi</string>
+
+    <!-- MainActivity UI Strings -->
+    <string name="start_tracking_medications">Apni medicines track karna shuru karo</string>
+    <string name="collapse">Chupao</string>
+    <string name="expand">Kholo</string>
+    <string name="list_view">List</string>
+    <string name="timeline_view">Timeline</string>
+    <string name="todays_schedule">Aaj ka Schedule</string>
+    <string name="your_medications">Aapki Medicines</string>
+    <string name="exit_app">App Band Karein?</string>
+    <string name="exit_app_message">Kya aap sach mein app se exit karna chahte hain?</string>
+    <string name="yes_exit">Haan, Exit Karo</string>
+    <string name="edit">Edit</string>
+    <string name="overdue_medications">OVERDUE MEDICINES</string>
+    <string name="yesterday">Kal %s</string>
+    <string name="no_times_set">Koi time set nahi hai</string>
+    <string name="step_1_of_3">Step 1 / 3</string>
+    <string name="what_is_medication">Aapki medicine kya hai?</string>
+    <string name="take_photo_medicine">Medicine ki photo lo</string>
+    <string name="step_2_of_3">Step 2 / 3</string>
+    <string name="add_voice_instructions">Voice instructions add karein?</string>
+    <string name="optional">(Optional)</string>
+    <string name="continue_without_recording">Aap recording ke bina continue kar sakte hain</string>
+    <string name="no_audio">(Koi audio nahi)</string>
+
+    <!-- SettingsScreen UI Strings -->
+    <string name="language_label">Language</string>
+    <string name="preset_times">Preset Times</string>
+    <string name="morning">Subah</string>
+    <string name="lunch">Dopahar</string>
+    <string name="evening">Shaam</string>
+    <string name="bedtime">Raat</string>
+    <string name="notifications_label">Notifications</string>
+    <string name="repeat_interval">Repeat interval: %d min</string>
+    <string name="privacy_label">Privacy</string>
+    <string name="show_full_details_lock_screen">Lock screen pe poori details dikhao</string>
+    <string name="hidden_by_default">Default mein chhupa hua</string>
+    <string name="features_label">Features</string>
+    <string name="audio_transcription">Audio Transcription</string>
+    <string name="audio_transcription_description">Audio notes ko text mein convert karo (75MB download chahiye)</string>
+
+    <!-- HistoryScreen UI Strings -->
+    <string name="history">History</string>
+    <string name="by_date">Date Ke Hisaab Se</string>
+    <string name="by_medication">Medicine Ke Hisaab Se</string>
+    <string name="last_x_days">Last %d Din</string>
+    <string name="load_previous_3_days">Pichle 3 Din Load Karo</string>
+    <string name="yesterday_label">Kal</string>
+    <string name="on_time">Time pe</string>
+    <string name="late_label">LATE</string>
+    <string name="late_by_x_min">%d min late</string>
+    <string name="skipped_label">Skip kiya</string>
+    <string name="missed_label">Miss ho gaya</string>
+    <string name="scheduled_time">Scheduled: %s</string>
+    <string name="taken_time">Liya: %s</string>
+
+    <!-- Reports Screen Tabs -->
+    <string name="report_summary">Summary</string>
+    <string name="report_calendar">Calendar</string>
+    <string name="report_trends">Trends</string>
+    <string name="report_by_medication">Medicine Wise</string>
+
+    <!-- Summary Stats -->
+    <string name="this_week">Is Hafte</string>
+    <string name="adherence_rate">Aap Kaisa Kar Rahe Ho</string>
+    <string name="success_score">Success Score</string>
+    <string name="your_progress">Aapki Progress</string>
+
+    <!-- Reports Settings -->
+    <string name="reports_label">Reports</string>
+    <string name="week_start_day">Hafta Kab Shuru Hota Hai</string>
+    <string name="week_start_sunday">Sunday</string>
+    <string name="week_start_monday">Monday</string>
+    <string name="default_report_tab">Default Report Tab</string>
+    <string name="include_skipped_in_adherence">Skip Ko Miss Mein Count Karo</string>
+    <string name="include_skipped_description">Skipped doses ko adherence calculations mein shamil karo</string>
+    <string name="export_data">Data Export Karo</string>
+    <string name="export_history_csv">History Ko CSV Mein Export Karo</string>
+    <string name="exporting">Export ho raha hai…</string>
+    <string name="export_success">Data successfully export ho gaya</string>
+    <string name="export_failed">Export fail ho gaya</string>
+</resources>

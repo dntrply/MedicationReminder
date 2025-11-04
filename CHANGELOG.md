@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2025-11-04
+
+Language expansion and gamification enhancement release adding Hinglish language support and encouraging messages across all languages.
+
+### Added
+- **Hinglish Language Support** - New language option mixing Hindi and English naturally
+  - Complete Hinglish translations for all app strings (values-en-rIN)
+  - Natural Hinglish phrases like "Maine le liya", "Bahut badhiya!", "Mast chal raha hai!"
+  - Accessible language choice for users who prefer Hinglish over pure Hindi or English
+  - Hinglish option added to Settings screen language selector
+
+- **Locale-Based Default Language** - Smart language selection based on device location
+  - Automatically defaults to Hinglish for users in India
+  - Falls back to device language (Hindi, Gujarati, Marathi) or English for other regions
+  - Improves first-run experience for Indian users
+
+- **Enhanced Gamified Messages Across All Languages** - Motivational messages with emojis
+  - Added 4 new encouraging message types: "Awesome streak!", "Keep it up!", "Health hero!", "Fantastic work!"
+  - Messages translated to all 5 languages (English, Hinglish, Hindi, Gujarati, Marathi)
+  - Emoji support added for visual encouragement (🌟, 💪, 🏆, ✨, 🎯, 💊, 🌈)
+  - Each language maintains linguistic purity while staying fun and motivating
+
+### Changed
+- **English Language Strings** - Refined to maintain pure English
+  - Removed casual phrases, kept professional encouraging tone
+  - "champ" → "champion", "on a roll" → "doing great"
+  - Ensures English remains accessible for international users
+
+### Technical
+- Updated `SettingsStore.kt` with `getDefaultLanguageForLocale()` function for locale detection
+- Modified `MainActivity.kt` locale handling to support "en-rIN" (Hinglish) properly
+- Added Hinglish to language selector UI in `SettingsScreen.kt`
+- Enhanced all language string files (values, values-hi, values-gu, values-mr) with gamified messages
+
 ## [0.16.0] - 2025-11-04
 
 Major feature release adding comprehensive reporting capabilities and gamified, encouraging notification messages with Hinglish.

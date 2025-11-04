@@ -111,10 +111,14 @@
     <string name="taken_early_hours_minutes">%1$d hour %2$d minutes early</string>
 
     <!-- Gamified/Encouraging Messages -->
-    <string name="taken_on_time_celebration">Great job! Taken on time!</string>
-    <string name="taken_better_late">Better late than never!</string>
-    <string name="taken_early_great">Excellent! You\'re ahead!</string>
+    <string name="taken_on_time_celebration">Great job! Taken on time! 🌟</string>
+    <string name="taken_better_late">Better late than never! 💪</string>
+    <string name="taken_early_great">Excellent! You\'re ahead! 🏆</string>
     <string name="medication_skipped">You skipped this medication</string>
+    <string name="awesome_streak">Awesome! You\'re doing great! ✨</string>
+    <string name="keep_it_up">Keep it up, champion! 🎯</string>
+    <string name="health_hero">You\'re a health hero! 💊</string>
+    <string name="fantastic_work">Fantastic work! 🌈</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">Medication Reminders</string>

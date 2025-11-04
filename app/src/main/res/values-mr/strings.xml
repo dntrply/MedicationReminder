@@ -188,4 +188,40 @@
     <string name="missed_label">घेतले नाही</string>
     <string name="scheduled_time">नियोजित: %s</string>
     <string name="taken_time">घेतले: %s</string>
+
+    <!-- Gamified/Encouraging Messages -->
+    <string name="taken_on_time_celebration">खूप छान! वेळेवर घेतले! 🌟</string>
+    <string name="taken_better_late">उशिरा झाले पण हरकत नाही! 💪</string>
+    <string name="taken_early_great">उत्तम! तुम्ही पुढे आहात! 🏆</string>
+    <string name="medication_skipped">तुम्ही हे औषध वगळले</string>
+    <string name="awesome_streak">छान! तुम्ही मस्त करत आहात! ✨</string>
+    <string name="keep_it_up">असेच चालू ठेवा! 🎯</string>
+    <string name="health_hero">तुम्ही आरोग्याचे नायक आहात! 💊</string>
+    <string name="fantastic_work">धमाल काम! 🌈</string>
+
+    <!-- Reports Screen Tabs -->
+    <string name="report_summary">सारांश</string>
+    <string name="report_calendar">कॅलेंडर</string>
+    <string name="report_trends">ट्रेंड्स</string>
+    <string name="report_by_medication">औषधानुसार</string>
+
+    <!-- Summary Stats -->
+    <string name="this_week">या आठवड्यात</string>
+    <string name="adherence_rate">तुम्ही कसे करत आहात</string>
+    <string name="success_score">यश स्कोअर</string>
+    <string name="your_progress">तुमची प्रगती</string>
+
+    <!-- Reports Settings -->
+    <string name="reports_label">अहवाल</string>
+    <string name="week_start_day">आठवडा सुरू होण्याचा दिवस</string>
+    <string name="week_start_sunday">रविवार</string>
+    <string name="week_start_monday">सोमवार</string>
+    <string name="default_report_tab">डिफॉल्ट अहवाल टॅब</string>
+    <string name="include_skipped_in_adherence">वगळले ते चुकले मध्ये मोजा</string>
+    <string name="include_skipped_description">वगळलेल्या डोसला पालन गणनेमध्ये समाविष्ट करा</string>
+    <string name="export_data">डेटा निर्यात करा</string>
+    <string name="export_history_csv">इतिहास CSV मध्ये निर्यात करा</string>
+    <string name="exporting">निर्यात होत आहे…</string>
+    <string name="export_success">डेटा यशस्वीरित्या निर्यात झाला</string>
+    <string name="export_failed">निर्यात अयशस्वी</string>
 </resources>

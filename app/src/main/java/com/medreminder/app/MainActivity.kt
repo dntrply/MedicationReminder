@@ -498,7 +498,10 @@ private fun getLanguagePreference(context: Context): String {
 private fun getCurrentLanguage(context: Context): String = getLanguagePreference(context)
 
 private fun updateContextLocale(context: Context, language: String): Context {
-    val locale = Locale(language)
+    val locale = when (language) {
+        "en-rIN" -> Locale("en", "IN") // Hinglish
+        else -> Locale(language)
+    }
     Locale.setDefault(locale)
     val config = Configuration(context.resources.configuration)
     config.setLocale(locale)
@@ -506,7 +509,10 @@ private fun updateContextLocale(context: Context, language: String): Context {
 }
 
 private fun setAppLocale(context: Context, language: String) {
-    val locale = Locale(language)
+    val locale = when (language) {
+        "en-rIN" -> Locale("en", "IN") // Hinglish
+        else -> Locale(language)
+    }
     Locale.setDefault(locale)
     val config = Configuration(context.resources.configuration)
     config.setLocale(locale)

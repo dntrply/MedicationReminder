@@ -101,10 +101,14 @@
     <string name="skip">छोड़ें</string>
 
     <!-- Gamified/Encouraging Messages -->
-    <string name="taken_on_time_celebration">बहुत बढ़िया! समय पर ली!</string>
-    <string name="taken_better_late">देर से ही सही, कोई बात नहीं!</string>
-    <string name="taken_early_great">उत्कृष्ट! आप आगे हैं!</string>
+    <string name="taken_on_time_celebration">बहुत बढ़िया! समय पर ली! 🌟</string>
+    <string name="taken_better_late">देर से ही सही, कोई बात नहीं! 💪</string>
+    <string name="taken_early_great">उत्कृष्ट! आप आगे हैं! 🏆</string>
     <string name="medication_skipped">आपने यह दवा छोड़ दी</string>
+    <string name="awesome_streak">शानदार! आप बहुत अच्छा कर रहे हैं! ✨</string>
+    <string name="keep_it_up">ऐसे ही करते रहो! 🎯</string>
+    <string name="health_hero">आप स्वास्थ्य के हीरो हैं! 💊</string>
+    <string name="fantastic_work">कमाल का काम! 🌈</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">दवा रिमाइंडर</string>

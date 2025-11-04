@@ -28,7 +28,26 @@ object SettingsStore {
     private val INCLUDE_SKIPPED_IN_ADHERENCE = booleanPreferencesKey("include_skipped_in_adherence")
 
     fun languageFlow(context: Context): Flow<String> =
-        context.userPrefs.data.map { prefs -> prefs[LANGUAGE] ?: "en" }
+        context.userPrefs.data.map { prefs ->
+            prefs[LANGUAGE] ?: getDefaultLanguageForLocale(context)
+        }
+
+    /**
+     * Get default language based on device locale
+     * Returns "en-rIN" (Hinglish) for India, otherwise English
+     */
+    private fun getDefaultLanguageForLocale(context: Context): String {
+        val locale = java.util.Locale.getDefault()
+        val country = locale.country
+
+        return when {
+            country.equals("IN", ignoreCase = true) -> "en-rIN" // Hinglish for India
+            locale.language == "hi" -> "hi" // Hindi
+            locale.language == "gu" -> "gu" // Gujarati
+            locale.language == "mr" -> "mr" // Marathi
+            else -> "en" // English as fallback
+        }
+    }
 
     suspend fun setLanguage(context: Context, lang: String) {
         context.userPrefs.edit { prefs -> prefs[LANGUAGE] = lang }

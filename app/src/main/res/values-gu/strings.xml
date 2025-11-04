@@ -175,8 +175,38 @@
     <string name="taken_time">લીધું: %s</string>
 
     <!-- Gamified/Encouraging Messages -->
-    <string name="taken_on_time_celebration">ખૂબ સરસ! સમયસર લીધી!</string>
-    <string name="taken_better_late">મોડેથી પણ કોઈ વાંધો નથી!</string>
-    <string name="taken_early_great">ઉત્તમ! તમે આગળ છો!</string>
+    <string name="taken_on_time_celebration">ખૂબ સરસ! સમયસર લીધી! 🌟</string>
+    <string name="taken_better_late">મોડેથી પણ કોઈ વાંધો નથી! 💪</string>
+    <string name="taken_early_great">ઉત્તમ! તમે આગળ છો! 🏆</string>
     <string name="medication_skipped">તમે આ દવા છોડી દીધી</string>
+    <string name="awesome_streak">શાનદાર! તમે મસ્ત કરી રહ્યા છો! ✨</string>
+    <string name="keep_it_up">એવું જ ચાલુ રાખો! 🎯</string>
+    <string name="health_hero">તમે આરોગ્યના નાયક છો! 💊</string>
+    <string name="fantastic_work">જબરદસ્ત કામ! 🌈</string>
+
+    <!-- Reports Screen Tabs -->
+    <string name="report_summary">સારાંશ</string>
+    <string name="report_calendar">કેલેન્ડર</string>
+    <string name="report_trends">ટ્રેન્ડ્સ</string>
+    <string name="report_by_medication">દવા મુજબ</string>
+
+    <!-- Summary Stats -->
+    <string name="this_week">આ અઠવાડિયે</string>
+    <string name="adherence_rate">તમે કેવું કરી રહ્યા છો</string>
+    <string name="success_score">સફળતા સ્કોર</string>
+    <string name="your_progress">તમારી પ્રગતિ</string>
+
+    <!-- Reports Settings -->
+    <string name="reports_label">રિપોર્ટ્સ</string>
+    <string name="week_start_day">અઠવાડિયું શરૂ થાય ત્યારે</string>
+    <string name="week_start_sunday">રવિવાર</string>
+    <string name="week_start_monday">સોમવાર</string>
+    <string name="default_report_tab">ડિફોલ્ટ રિપોર્ટ ટેબ</string>
+    <string name="include_skipped_in_adherence">છોડેલાને વગડેલામાં ગણો</string>
+    <string name="include_skipped_description">છોડી દીધેલી માત્રાને પાલનની ગણતરીમાં સામેલ કરો</string>
+    <string name="export_data">ડેટા નિકાસ કરો</string>
+    <string name="export_history_csv">ઇતિહાસને CSV માં નિકાસ કરો</string>
+    <string name="exporting">નિકાસ થઈ રહ્યું છે…</string>
+    <string name="export_success">ડેટા સફળતાપૂર્વક નિકાસ થયો</string>
+    <string name="export_failed">નિકાસ નિષ્ફળ</string>
 </resources>

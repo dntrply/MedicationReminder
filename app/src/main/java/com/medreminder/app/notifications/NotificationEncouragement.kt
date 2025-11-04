@@ -2,13 +2,15 @@ package com.medreminder.app.notifications
 
 import android.content.Context
 import com.medreminder.app.data.MedicationDatabase
+import com.medreminder.app.data.SettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
 import java.util.*
 
 /**
  * Provides gamified, encouraging messages for medication notifications.
- * Uses Hinglish (Hindi + English) liberally for a friendly, motivating experience.
+ * Uses Hinglish (Hindi + English) for Hinglish language preference, or English for other languages.
  */
 object NotificationEncouragement {
 
@@ -23,19 +25,21 @@ object NotificationEncouragement {
     ): String {
         val streak = getCurrentStreak(context)
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val language = SettingsStore.languageFlow(context).first()
+        val useHinglish = language == "en-rIN"
 
         // If this is a repeat notification, be more urgent but still friendly
         if (repeatCount > 0) {
-            return getRepeatMessage(medicationName, repeatCount)
+            return getRepeatMessage(medicationName, repeatCount, useHinglish)
         }
 
         // First notification - use encouraging streak-based message
         return when {
-            streak >= 30 -> getChampionMessage(medicationName, profileName, streak)
-            streak >= 14 -> getSuperstarMessage(medicationName, profileName, streak)
-            streak >= 7 -> getRockstarMessage(medicationName, profileName, streak)
-            streak >= 3 -> getGreatMessage(medicationName, profileName, streak)
-            else -> getStarterMessage(medicationName, profileName, hour)
+            streak >= 30 -> getChampionMessage(medicationName, profileName, streak, useHinglish)
+            streak >= 14 -> getSuperstarMessage(medicationName, profileName, streak, useHinglish)
+            streak >= 7 -> getRockstarMessage(medicationName, profileName, streak, useHinglish)
+            streak >= 3 -> getGreatMessage(medicationName, profileName, streak, useHinglish)
+            else -> getStarterMessage(medicationName, profileName, hour, useHinglish)
         }
     }
 
@@ -126,85 +130,162 @@ object NotificationEncouragement {
 
     // ========== Private Helper Methods ==========
 
-    private fun getChampionMessage(medicationName: String, profileName: String, streak: Int): String {
-        return listOf(
-            "🏆 Champion $profileName! $streak days ka amazing streak! Time for $medicationName! 💪",
-            "⭐ Superstar $profileName! $streak din perfect! Ab $medicationName lene ka time! 🔥",
-            "🎖️ Legend mode! $streak days! Chalo $medicationName le lo! 💯",
-            "👑 King/Queen of consistency! $streak days strong! Time for $medicationName! 🚀",
-            "🌟 Incredible $profileName! $streak din ka record! $medicationName ka time hai! ✨"
-        ).random()
+    private fun getChampionMessage(medicationName: String, profileName: String, streak: Int, useHinglish: Boolean): String {
+        return if (useHinglish) {
+            listOf(
+                "🏆 Champion $profileName! $streak days ka amazing streak! Time for $medicationName! 💪",
+                "⭐ Superstar $profileName! $streak din perfect! Ab $medicationName lene ka time! 🔥",
+                "🎖️ Legend mode! $streak days! Chalo $medicationName le lo! 💯",
+                "👑 King/Queen of consistency! $streak days strong! Time for $medicationName! 🚀",
+                "🌟 Incredible $profileName! $streak din ka record! $medicationName ka time hai! ✨"
+            ).random()
+        } else {
+            listOf(
+                "🏆 Champion $profileName! $streak days amazing streak! Time for $medicationName! 💪",
+                "⭐ Superstar $profileName! $streak days perfect! Time to take $medicationName! 🔥",
+                "🎖️ Legend mode! $streak days! Let's take $medicationName! 💯",
+                "👑 King/Queen of consistency! $streak days strong! Time for $medicationName! 🚀",
+                "🌟 Incredible $profileName! $streak days record! Time for $medicationName! ✨"
+            ).random()
+        }
     }
 
-    private fun getSuperstarMessage(medicationName: String, profileName: String, streak: Int): String {
-        return listOf(
-            "🌟 Superstar $profileName! $streak days going great! Time for $medicationName! 🔥",
-            "💪 Zabardast consistency! $streak days! Ab $medicationName lene ka time! ⭐",
-            "🎯 On fire $profileName! $streak din strong! $medicationName ready hai! 💯",
-            "⚡ Amazing streak! $streak days! Chalo $medicationName le lo! 🚀",
-            "✨ Kamaal ka discipline! $streak days! Time for $medicationName! 🎉"
-        ).random()
+    private fun getSuperstarMessage(medicationName: String, profileName: String, streak: Int, useHinglish: Boolean): String {
+        return if (useHinglish) {
+            listOf(
+                "🌟 Superstar $profileName! $streak days going great! Time for $medicationName! 🔥",
+                "💪 Zabardast consistency! $streak days! Ab $medicationName lene ka time! ⭐",
+                "🎯 On fire $profileName! $streak din strong! $medicationName ready hai! 💯",
+                "⚡ Amazing streak! $streak days! Chalo $medicationName le lo! 🚀",
+                "✨ Kamaal ka discipline! $streak days! Time for $medicationName! 🎉"
+            ).random()
+        } else {
+            listOf(
+                "🌟 Superstar $profileName! $streak days going great! Time for $medicationName! 🔥",
+                "💪 Amazing consistency! $streak days! Time to take $medicationName! ⭐",
+                "🎯 On fire $profileName! $streak days strong! $medicationName is ready! 💯",
+                "⚡ Amazing streak! $streak days! Let's take $medicationName! 🚀",
+                "✨ Excellent discipline! $streak days! Time for $medicationName! 🎉"
+            ).random()
+        }
     }
 
-    private fun getRockstarMessage(medicationName: String, profileName: String, streak: Int): String {
-        return listOf(
-            "🎸 Rockstar $profileName! $streak din perfect! $medicationName ka time! 💪",
-            "⭐ Bahut achha chal raha hai! $streak days! Ab $medicationName lo! 🔥",
-            "🔥 Mast consistency! $streak days! Time for $medicationName! ⭐",
-            "💯 Great going $profileName! $streak din complete! $medicationName lo! 🎯",
-            "✨ Ekdum on track! $streak days! $medicationName ka time aa gaya! 🚀"
-        ).random()
+    private fun getRockstarMessage(medicationName: String, profileName: String, streak: Int, useHinglish: Boolean): String {
+        return if (useHinglish) {
+            listOf(
+                "🎸 Rockstar $profileName! $streak din perfect! $medicationName ka time! 💪",
+                "⭐ Bahut achha chal raha hai! $streak days! Ab $medicationName lo! 🔥",
+                "🔥 Mast consistency! $streak days! Time for $medicationName! ⭐",
+                "💯 Great going $profileName! $streak din complete! $medicationName lo! 🎯",
+                "✨ Ekdum on track! $streak days! $medicationName ka time aa gaya! 🚀"
+            ).random()
+        } else {
+            listOf(
+                "🎸 Rockstar $profileName! $streak days perfect! Time for $medicationName! 💪",
+                "⭐ Great progress! $streak days! Time to take $medicationName! 🔥",
+                "🔥 Awesome consistency! $streak days! Time for $medicationName! ⭐",
+                "💯 Great going $profileName! $streak days complete! Take $medicationName! 🎯",
+                "✨ Right on track! $streak days! Time for $medicationName! 🚀"
+            ).random()
+        }
     }
 
-    private fun getGreatMessage(medicationName: String, profileName: String, streak: Int): String {
-        return listOf(
-            "👍 Good going $profileName! $streak days! Time for $medicationName! 💪",
-            "⭐ Achha chal raha hai! $streak din ho gaye! $medicationName lo! 🔥",
-            "💪 Keep it up! $streak days done! Ab $medicationName ka time! ⭐",
-            "🎯 Nice streak starting! $streak days! Time for $medicationName! ✨",
-            "😊 Bahut achha! $streak din! Chalo $medicationName le lo! 🚀"
-        ).random()
+    private fun getGreatMessage(medicationName: String, profileName: String, streak: Int, useHinglish: Boolean): String {
+        return if (useHinglish) {
+            listOf(
+                "👍 Good going $profileName! $streak days! Time for $medicationName! 💪",
+                "⭐ Achha chal raha hai! $streak din ho gaye! $medicationName lo! 🔥",
+                "💪 Keep it up! $streak days done! Ab $medicationName ka time! ⭐",
+                "🎯 Nice streak starting! $streak days! Time for $medicationName! ✨",
+                "😊 Bahut achha! $streak din! Chalo $medicationName le lo! 🚀"
+            ).random()
+        } else {
+            listOf(
+                "👍 Good going $profileName! $streak days! Time for $medicationName! 💪",
+                "⭐ Great progress! $streak days done! Take $medicationName! 🔥",
+                "💪 Keep it up! $streak days done! Time for $medicationName! ⭐",
+                "🎯 Nice streak starting! $streak days! Time for $medicationName! ✨",
+                "😊 Very good! $streak days! Let's take $medicationName! 🚀"
+            ).random()
+        }
     }
 
-    private fun getStarterMessage(medicationName: String, profileName: String, hour: Int): String {
+    private fun getStarterMessage(medicationName: String, profileName: String, hour: Int, useHinglish: Boolean): String {
         val timeGreeting = when (hour) {
             in 5..11 -> "Good morning"
-            in 12..16 -> "Namaste"
+            in 12..16 -> if (useHinglish) "Namaste" else "Good afternoon"
             in 17..20 -> "Good evening"
             else -> "Hey"
         }
 
-        return listOf(
-            "$timeGreeting $profileName! 💊 Time to take $medicationName! Let's start a streak! 🔥",
-            "Hi $profileName! ⏰ $medicationName ka time hai! Ek nayi streak shuru karein! 💪",
-            "$timeGreeting! 😊 Time for $medicationName. Consistency is key! ⭐",
-            "Hey $profileName! 💊 $medicationName lo! Aaj se regular rahein! 🎯",
-            "$timeGreeting! ✨ Time to take $medicationName! Let's build a streak! 🚀"
-        ).random()
+        return if (useHinglish) {
+            listOf(
+                "$timeGreeting $profileName! 💊 Time to take $medicationName! Let's start a streak! 🔥",
+                "Hi $profileName! ⏰ $medicationName ka time hai! Ek nayi streak shuru karein! 💪",
+                "$timeGreeting! 😊 Time for $medicationName. Consistency is key! ⭐",
+                "Hey $profileName! 💊 $medicationName lo! Aaj se regular rahein! 🎯",
+                "$timeGreeting! ✨ Time to take $medicationName! Let's build a streak! 🚀"
+            ).random()
+        } else {
+            listOf(
+                "$timeGreeting $profileName! 💊 Time to take $medicationName! Let's start a streak! 🔥",
+                "Hi $profileName! ⏰ Time for $medicationName! Let's start a new streak! 💪",
+                "$timeGreeting! 😊 Time for $medicationName. Consistency is key! ⭐",
+                "Hey $profileName! 💊 Take $medicationName! Let's be regular! 🎯",
+                "$timeGreeting! ✨ Time to take $medicationName! Let's build a streak! 🚀"
+            ).random()
+        }
     }
 
-    private fun getRepeatMessage(medicationName: String, repeatCount: Int): String {
+    private fun getRepeatMessage(medicationName: String, repeatCount: Int, useHinglish: Boolean): String {
         return when (repeatCount) {
-            1 -> listOf(
-                "Reminder again! ⏰ $medicationName abhi bhi pending hai! Please lo! 💊",
-                "Yaad hai? 😊 $medicationName lena hai! Don't forget! ⏰",
-                "Phir se reminder! 💊 $medicationName ka time ho gaya tha! 🔔",
-                "Hey! ⏰ $medicationName still pending! Jaldi lo! 💪"
-            ).random()
+            1 -> if (useHinglish) {
+                listOf(
+                    "Reminder again! ⏰ $medicationName abhi bhi pending hai! Please lo! 💊",
+                    "Yaad hai? 😊 $medicationName lena hai! Don't forget! ⏰",
+                    "Phir se reminder! 💊 $medicationName ka time ho gaya tha! 🔔",
+                    "Hey! ⏰ $medicationName still pending! Jaldi lo! 💪"
+                ).random()
+            } else {
+                listOf(
+                    "Reminder again! ⏰ $medicationName is still pending! Please take it! 💊",
+                    "Remember? 😊 Time to take $medicationName! Don't forget! ⏰",
+                    "Reminder again! 💊 It's time for $medicationName! 🔔",
+                    "Hey! ⏰ $medicationName is still pending! Please take it soon! 💪"
+                ).random()
+            }
 
-            2, 3 -> listOf(
-                "Important! ⚠️ $medicationName abhi tak nahi liya! Please lo! 💊",
-                "Yaad karo! 🔔 $medicationName bahut important hai! Lo please! ⏰",
-                "Reminder phir se! ⚠️ $medicationName pending hai! Mat bhoolna! 💪",
-                "Please! 💊 $medicationName lo! Health first! 🏥"
-            ).random()
+            2, 3 -> if (useHinglish) {
+                listOf(
+                    "Important! ⚠️ $medicationName abhi tak nahi liya! Please lo! 💊",
+                    "Yaad karo! 🔔 $medicationName bahut important hai! Lo please! ⏰",
+                    "Reminder phir se! ⚠️ $medicationName pending hai! Mat bhoolna! 💪",
+                    "Please! 💊 $medicationName lo! Health first! 🏥"
+                ).random()
+            } else {
+                listOf(
+                    "Important! ⚠️ You haven't taken $medicationName yet! Please take it! 💊",
+                    "Remember! 🔔 $medicationName is very important! Please take it! ⏰",
+                    "Reminder again! ⚠️ $medicationName is still pending! Don't forget! 💪",
+                    "Please! 💊 Take $medicationName! Health first! 🏥"
+                ).random()
+            }
 
-            else -> listOf(
-                "🚨 Urgent! $medicationName abhi tak pending! Please jaldi lo! 💊",
-                "⚠️ Mat bhoolna! $medicationName bohot zaruri hai! Please lo! 🏥",
-                "🔴 Important reminder! $medicationName lo please! Health matters! 💪",
-                "❗ Last reminder! $medicationName lena hai! Don't miss! ⏰"
-            ).random()
+            else -> if (useHinglish) {
+                listOf(
+                    "🚨 Urgent! $medicationName abhi tak pending! Please jaldi lo! 💊",
+                    "⚠️ Mat bhoolna! $medicationName bohot zaruri hai! Please lo! 🏥",
+                    "🔴 Important reminder! $medicationName lo please! Health matters! 💪",
+                    "❗ Last reminder! $medicationName lena hai! Don't miss! ⏰"
+                ).random()
+            } else {
+                listOf(
+                    "🚨 Urgent! $medicationName is still pending! Please take it soon! 💊",
+                    "⚠️ Don't forget! $medicationName is very important! Please take it! 🏥",
+                    "🔴 Important reminder! Please take $medicationName! Health matters! 💪",
+                    "❗ Last reminder! Time to take $medicationName! Don't miss it! ⏰"
+                ).random()
+            }
         }
     }
 

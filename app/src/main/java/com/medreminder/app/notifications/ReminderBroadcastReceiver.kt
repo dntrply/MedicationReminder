@@ -22,6 +22,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.content.res.Configuration
+import java.util.Locale
 
 class ReminderBroadcastReceiver : BroadcastReceiver() {
 
@@ -55,6 +57,23 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
     }
 
     // ========== Helper Functions ==========
+
+    /**
+     * Create a localized context based on the app's language preference
+     */
+    private fun getLocalizedContext(context: Context): Context {
+        val language = runBlocking { SettingsStore.languageFlow(context).first() }
+        val locale = when (language) {
+            "en-rIN" -> Locale("en", "IN") // Hinglish
+            "gu" -> Locale("gu")
+            "hi" -> Locale("hi")
+            "mr" -> Locale("mr")
+            else -> Locale(language)
+        }
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(locale)
+        return context.createConfigurationContext(config)
+    }
 
     /**
      * Calculate grouped notification ID for a time slot
@@ -251,6 +270,9 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         Log.d(TAG, "Showing notification for $medicationName (repeat #$repeatCount)")
 
+        // Get localized context for notification strings
+        val localizedContext = getLocalizedContext(context)
+
         createNotificationChannels(context)
 
         // Get medication and profile from database
@@ -375,7 +397,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         // For locked screen without full detail, use generic title
         val title = if (!showFull && isLocked) {
-            context.getString(R.string.medication_reminder)
+            localizedContext.getString(R.string.medication_reminder)
         } else {
             notificationMessage
         }
@@ -399,12 +421,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         builder.addAction(
                 R.drawable.ic_check,
-                context.getString(R.string.ive_taken_it),
+                localizedContext.getString(R.string.ive_taken_it),
                 markTakenPendingIntent
             )
             .addAction(
                 R.drawable.ic_snooze,
-                context.getString(
+                localizedContext.getString(
                     R.string.remind_in_minutes,
                     runBlocking { com.medreminder.app.data.SettingsStore.repeatIntervalFlow(context).first() }
                 ),
@@ -412,7 +434,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             )
             .addAction(
                 R.drawable.ic_cancel,
-                context.getString(R.string.skip_dose),
+                localizedContext.getString(R.string.skip_dose),
                 skipPendingIntent
             )
             .setTimeoutAfter(0)  // Never timeout
@@ -421,7 +443,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             builder.setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             val publicNotification = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_notification_medication)
-                .setContentTitle(context.getString(R.string.medication_reminder))
+                .setContentTitle(localizedContext.getString(R.string.medication_reminder))
                 .setContentText(formatTime(hour, minute))
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build()

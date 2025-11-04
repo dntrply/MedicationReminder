@@ -234,4 +234,66 @@
     <string name="exporting">Exporting…</string>
     <string name="export_success">Data exported successfully</string>
     <string name="export_failed">Export failed</string>
+
+    <!-- Notification Encouragement Message Arrays -->
+    <string-array name="notif_repeat_level1">
+        <item>Reminder again! ⏰ %1$s is still pending! Please take it! 💊</item>
+        <item>Remember? 😊 Time to take %1$s! Don\'t forget! ⏰</item>
+        <item>Reminder again! 💊 It\'s time for %1$s! 🔔</item>
+        <item>Hey! ⏰ %1$s is still pending! Please take it soon! 💪</item>
+    </string-array>
+
+    <string-array name="notif_repeat_level2">
+        <item>Important! ⚠️ You haven\'t taken %1$s yet! Please take it! 💊</item>
+        <item>Remember! 🔔 %1$s is very important! Please take it! ⏰</item>
+        <item>Reminder again! ⚠️ %1$s is still pending! Don\'t forget! 💪</item>
+        <item>Please! 💊 Take %1$s! Health first! 🏥</item>
+    </string-array>
+
+    <string-array name="notif_repeat_level3">
+        <item>🚨 Urgent! %1$s is still pending! Please take it soon! 💊</item>
+        <item>⚠️ Don\'t forget! %1$s is very important! Please take it! 🏥</item>
+        <item>🔴 Important reminder! Please take %1$s! Health matters! 💪</item>
+        <item>❗ Last reminder! Time to take %1$s! Don\'t miss it! ⏰</item>
+    </string-array>
+
+    <string-array name="notif_champion">
+        <item>🏆 Champion %1$s! %2$d days amazing streak! Time for %3$s! 💪</item>
+        <item>⭐ Superstar %1$s! %2$d days perfect! Time to take %3$s! 🔥</item>
+        <item>🎖️ Legend mode! %2$d days! Let\'s take %3$s! 💯</item>
+        <item>👑 King/Queen of consistency! %2$d days strong! Time for %3$s! 🚀</item>
+        <item>🌟 Incredible %1$s! %2$d days record! Time for %3$s! ✨</item>
+    </string-array>
+
+    <string-array name="notif_superstar">
+        <item>🌟 Superstar %1$s! %2$d days going great! Time for %3$s! 🔥</item>
+        <item>💪 Amazing consistency! %2$d days! Time to take %3$s! ⭐</item>
+        <item>🎯 On fire %1$s! %2$d days strong! %3$s is ready! 💯</item>
+        <item>⚡ Amazing streak! %2$d days! Let\'s take %3$s! 🚀</item>
+        <item>✨ Excellent discipline! %2$d days! Time for %3$s! 🎉</item>
+    </string-array>
+
+    <string-array name="notif_rockstar">
+        <item>🎸 Rockstar %1$s! %2$d days perfect! Time for %3$s! 💪</item>
+        <item>⭐ Great progress! %2$d days! Time to take %3$s! 🔥</item>
+        <item>🔥 Awesome consistency! %2$d days! Time for %3$s! ⭐</item>
+        <item>💯 Great going %1$s! %2$d days complete! Take %3$s! 🎯</item>
+        <item>✨ Right on track! %2$d days! Time for %3$s! 🚀</item>
+    </string-array>
+
+    <string-array name="notif_great">
+        <item>👍 Good going %1$s! %2$d days! Time for %3$s! 💪</item>
+        <item>⭐ Great progress! %2$d days done! Take %3$s! 🔥</item>
+        <item>💪 Keep it up! %2$d days done! Time for %3$s! ⭐</item>
+        <item>🎯 Nice streak starting! %2$d days! Time for %3$s! ✨</item>
+        <item>😊 Very good! %2$d days! Let\'s take %3$s! 🚀</item>
+    </string-array>
+
+    <string-array name="notif_starter">
+        <item>%1$s %2$s! 💊 Time to take %3$s! Let\'s start a streak! 🔥</item>
+        <item>Hi %2$s! ⏰ Time for %3$s! Let\'s start a new streak! 💪</item>
+        <item>%1$s! 😊 Time for %3$s. Consistency is key! ⭐</item>
+        <item>Hey %2$s! 💊 Take %3$s! Let\'s be regular! 🎯</item>
+        <item>%1$s! ✨ Time to take %3$s! Let\'s build a streak! 🚀</item>
+    </string-array>
 </resources>

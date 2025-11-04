@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.3] - 2025-11-04
+
+Bug fix release addressing notification localization issues for non-English languages.
+
+### Fixed
+- **Notification Action Buttons Localization** - Action buttons ("I've Taken It", "Remind me in 10 min", "Skip") now display in the selected language
+  - Added localized context to notification system to respect app language preference
+  - Gujarati, Hindi, Marathi, and other languages now show properly translated button text
+  - Previously showed English regardless of language selection
+
+- **Notification Message Language Selection** - Gamified notification messages now show appropriate language
+  - Hinglish messages display only when Hinglish (en-rIN) is selected
+  - English messages display for all other languages including Gujarati, Hindi, Marathi
+  - Previously showed Hinglish text for all non-English languages
+
+- **Missing Gujarati Translations** - Added missing "Take Medications Screen" strings
+  - Added translations for: taken (લીધી), snooze (સ્નૂઝ), skip (છોડો)
+  - Added translations for action variants: ive_taken_all, snooze_all, skip_all, skip_dose
+  - Added screen navigation strings: take_medications_now, no_pending_medications, back_to_home
+
+### Technical
+- Modified `ReminderBroadcastReceiver.kt` to create localized context using app language preference
+- Updated `NotificationEncouragement.kt` to detect language and provide appropriate message variants
+- Added `getLocalizedContext()` helper function with locale configuration for notifications
+- Enhanced string resource coverage in values-gu/strings.xml for complete UI translation
+- Added English notification message string arrays to values/strings.xml for future extensibility
+
 ## [0.17.2] - 2025-11-04
 
 UI enhancement release improving the Reports Medicine Wise view with multi-medication selection and visual medication selector designed for elderly users.

@@ -79,11 +79,25 @@
     <string name="time_to_take">%s લેવાનો સમય</string>
     <string name="scheduled_for">નિર્ધારિત: %s</string>
     <string name="ive_taken_it">મેં લીધી છે</string>
+    <string name="ive_taken_all">મેં બધી લીધી</string>
     <string name="remind_me_later">10 મિનિટમાં યાદ અપાવો</string>
     <string name="remind_in_minutes">%1$d મિનિટમાં યાદ અપાવો</string>
+    <string name="snooze_all">બધું સ્નૂઝ કરો</string>
+    <string name="skip_dose">છોડો</string>
+    <string name="skip_all">બધું છોડો</string>
     <string name="dismiss">રદ કરો</string>
     <string name="marked_as_taken">લીધેલ તરીકે ચિહ્નિત</string>
     <string name="reminder_snoozed">રીમાઇન્ડર 10 મિનિટ માટે સ્નૂઝ થયું</string>
+    <string name="dose_skipped">ડોઝ છોડી દીધો</string>
+
+    <!-- Take Medications Screen -->
+    <string name="take_medications_now">હવે દવાઓ લો</string>
+    <string name="no_pending_medications">કોઈ બાકી દવાઓ નથી</string>
+    <string name="back_to_home">હોમ પર પાછા જાઓ</string>
+    <string name="or_take_action_on_all">અથવા બધા પર કાર્યવાહી કરો:</string>
+    <string name="taken">લીધી</string>
+    <string name="snooze">સ્નૂઝ</string>
+    <string name="skip">છોડો</string>
 
     <!-- Notifications -->
     <string name="notification_channel_name">દવા રીમાઇન્ડર્સ</string>

@@ -1,5 +1,6 @@
 package com.medreminder.app.ui
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,10 +21,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.medreminder.app.R
+import com.medreminder.app.data.MedicationDatabase
 import com.medreminder.app.data.PresetTimes
 import com.medreminder.app.data.PresetTimesManager
 import com.medreminder.app.data.SettingsStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -290,6 +294,170 @@ fun SettingsScreen(
                 )
             }
 
+            Divider(Modifier.padding(vertical = 8.dp))
+
+            // Reports section
+            Text(
+                text = stringResource(R.string.reports_label),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+            )
+
+            // Week start day
+            val weekStartDay by SettingsStore.weekStartDayFlow(context).collectAsState(initial = "sunday")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.week_start_day),
+                    fontSize = 16.sp,
+                    color = androidx.compose.ui.graphics.Color.Black
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    WeekStartDayCard(
+                        label = stringResource(R.string.week_start_sunday),
+                        selected = weekStartDay == "sunday",
+                        onClick = { scope.launch { SettingsStore.setWeekStartDay(context, "sunday") } },
+                        modifier = Modifier.weight(1f)
+                    )
+                    WeekStartDayCard(
+                        label = stringResource(R.string.week_start_monday),
+                        selected = weekStartDay == "monday",
+                        onClick = { scope.launch { SettingsStore.setWeekStartDay(context, "monday") } },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Default report tab
+            val defaultReportTab by SettingsStore.defaultReportTabFlow(context).collectAsState(initial = "summary")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.default_report_tab),
+                    fontSize = 16.sp,
+                    color = androidx.compose.ui.graphics.Color.Black
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DefaultTabCard(
+                        label = stringResource(R.string.report_summary),
+                        selected = defaultReportTab == "summary",
+                        onClick = { scope.launch { SettingsStore.setDefaultReportTab(context, "summary") } }
+                    )
+                    DefaultTabCard(
+                        label = stringResource(R.string.report_calendar),
+                        selected = defaultReportTab == "calendar",
+                        onClick = { scope.launch { SettingsStore.setDefaultReportTab(context, "calendar") } }
+                    )
+                    DefaultTabCard(
+                        label = stringResource(R.string.report_trends),
+                        selected = defaultReportTab == "trends",
+                        onClick = { scope.launch { SettingsStore.setDefaultReportTab(context, "trends") } }
+                    )
+                    DefaultTabCard(
+                        label = stringResource(R.string.report_by_medication),
+                        selected = defaultReportTab == "by_medication",
+                        onClick = { scope.launch { SettingsStore.setDefaultReportTab(context, "by_medication") } }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Include skipped in adherence
+            val includeSkippedInAdherence by SettingsStore.includeSkippedInAdherenceFlow(context)
+                .collectAsState(initial = false)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.include_skipped_in_adherence),
+                        fontSize = 16.sp,
+                        color = androidx.compose.ui.graphics.Color.Black
+                    )
+                    Text(
+                        text = stringResource(R.string.include_skipped_description),
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray
+                    )
+                }
+                Switch(
+                    checked = includeSkippedInAdherence,
+                    onCheckedChange = { checked ->
+                        scope.launch { SettingsStore.setIncludeSkippedInAdherence(context, checked) }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Export data button
+            var isExporting by remember { mutableStateOf(false) }
+            var exportMessage by remember { mutableStateOf<String?>(null) }
+
+            Button(
+                onClick = {
+                    isExporting = true
+                    exportMessage = null
+                    scope.launch {
+                        try {
+                            val fileName = exportHistoryData(context)
+                            exportMessage = "Exported to Downloads/$fileName"
+                            // Show toast
+                            android.widget.Toast.makeText(
+                                context,
+                                "History exported to Downloads folder",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        } catch (e: Exception) {
+                            exportMessage = "Export failed: ${e.message}"
+                            android.util.Log.e("ExportHistory", "Export failed", e)
+                            // Show error toast
+                            android.widget.Toast.makeText(
+                                context,
+                                "Export failed: ${e.message}",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        isExporting = false
+                    }
+                },
+                enabled = !isExporting,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF4A90E2)
+                )
+            ) {
+                if (isExporting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = androidx.compose.ui.graphics.Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.exporting))
+                } else {
+                    Text(stringResource(R.string.export_history_csv))
+                }
+            }
+
+            exportMessage?.let { message ->
+                Text(
+                    text = message,
+                    fontSize = 12.sp,
+                    color = if (message.contains("success"))
+                        androidx.compose.ui.graphics.Color(0xFF4CAF50)
+                    else
+                        androidx.compose.ui.graphics.Color(0xFFEF5350),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
     }
 
@@ -361,4 +529,160 @@ private fun LanguageOptionCard(
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WeekStartDayCard(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.height(50.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected)
+                androidx.compose.ui.graphics.Color(0xFF4A90E2)
+            else
+                androidx.compose.ui.graphics.Color(0xFFF5F5F5)
+        ),
+        onClick = onClick
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                fontSize = 16.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected)
+                    androidx.compose.ui.graphics.Color.White
+                else
+                    androidx.compose.ui.graphics.Color.Black
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DefaultTabCard(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected)
+                androidx.compose.ui.graphics.Color(0xFF4A90E2)
+            else
+                androidx.compose.ui.graphics.Color(0xFFF5F5F5)
+        ),
+        onClick = onClick
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = label,
+                fontSize = 16.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected)
+                    androidx.compose.ui.graphics.Color.White
+                else
+                    androidx.compose.ui.graphics.Color.Black
+            )
+        }
+    }
+}
+
+/**
+ * Export history data to CSV file
+ * @return The filename of the exported CSV
+ */
+private suspend fun exportHistoryData(context: Context): String = withContext(Dispatchers.IO) {
+    android.util.Log.d("ExportHistory", "Starting export...")
+
+    val db = MedicationDatabase.getDatabase(context)
+    val historyDao = db.historyDao()
+    val medicationDao = db.medicationDao()
+
+    // Get active profile ID
+    val activeProfileId = SettingsStore.getActiveProfileId(context)
+    if (activeProfileId == null) {
+        android.util.Log.e("ExportHistory", "No active profile ID")
+        throw IllegalStateException("No active profile")
+    }
+
+    android.util.Log.d("ExportHistory", "Active profile ID: $activeProfileId")
+
+    // Get all history for active profile (using sync version on IO dispatcher)
+    val allHistory: List<com.medreminder.app.data.MedicationHistory> = historyDao.getAllHistorySync()
+        .filter { it.profileId == activeProfileId }
+
+    android.util.Log.d("ExportHistory", "Found ${allHistory.size} history entries")
+
+    // Create CSV content
+    val csvBuilder = StringBuilder()
+    csvBuilder.appendLine("Date,Time,Medication,Scheduled Time,Taken Time,Action,Was On Time")
+
+    allHistory.forEach { entry: com.medreminder.app.data.MedicationHistory ->
+        val medicationName = entry.medicationName
+        val dateTime = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            .format(java.util.Date(entry.takenTime))
+        val scheduledTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(entry.scheduledTime))
+        val takenTime = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(entry.takenTime))
+
+        csvBuilder.appendLine("$dateTime,$takenTime,\"$medicationName\",$scheduledTime,$takenTime,${entry.action},${entry.wasOnTime}")
+    }
+
+    android.util.Log.d("ExportHistory", "CSV content created, ${csvBuilder.length} chars")
+
+    // Save to Downloads folder
+    val contentResolver = context.contentResolver
+    val fileName = "medication_history_${System.currentTimeMillis()}.csv"
+
+    android.util.Log.d("ExportHistory", "Attempting to save file: $fileName")
+
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        // Use MediaStore for Android 10+
+        val contentValues = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "text/csv")
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+        }
+
+        val uri = contentResolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+        if (uri != null) {
+            android.util.Log.d("ExportHistory", "Created URI: $uri")
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(csvBuilder.toString().toByteArray())
+                android.util.Log.d("ExportHistory", "File written successfully (Android 10+)")
+            } ?: throw java.io.IOException("Failed to open output stream")
+        } else {
+            throw java.io.IOException("Failed to create MediaStore entry")
+        }
+    } else {
+        // Use legacy approach for older Android versions
+        android.util.Log.d("ExportHistory", "Using legacy file approach")
+        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadsDir.exists()) {
+            downloadsDir.mkdirs()
+            android.util.Log.d("ExportHistory", "Created downloads directory")
+        }
+        val file = java.io.File(downloadsDir, fileName)
+        file.writeText(csvBuilder.toString())
+        android.util.Log.d("ExportHistory", "File written successfully (legacy): ${file.absolutePath}")
+    }
+
+    android.util.Log.d("ExportHistory", "Export completed successfully")
+    return@withContext fileName
 }

@@ -437,17 +437,8 @@ fun HistoryEntryCard(
 ) {
     val context = LocalContext.current
 
-    val statusColor = when (history.action) {
-        "TAKEN" -> if (history.wasOnTime) Color(0xFF4CAF50) else Color(0xFFFF9800)
-        "SKIPPED" -> Color(0xFFFF9800)  // Orange to match Timeline view
-        else -> Color(0xFFFF6B6B) // MISSED or unknown
-    }
-
-    val statusIcon = when (history.action) {
-        "TAKEN" -> if (history.wasOnTime) Icons.Default.CheckCircle else Icons.Default.Schedule
-        "SKIPPED" -> Icons.Default.Forward  // Match Timeline skip badge
-        else -> Icons.Default.Warning
-    }
+    // Use centralized status information
+    val statusInfo = MedicationStatus.getStatusInfo(history.action, history.wasOnTime)
 
     val statusText = when (history.action) {
         "TAKEN" -> if (history.wasOnTime) {
@@ -485,7 +476,7 @@ fun HistoryEntryCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.3f)),
+        border = BorderStroke(1.dp, statusInfo.color.copy(alpha = 0.3f)),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         )
@@ -501,13 +492,13 @@ fun HistoryEntryCard(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(statusColor.copy(alpha = 0.1f)),
+                    .background(statusInfo.color.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = statusIcon,
-                    contentDescription = null,
-                    tint = statusColor,
+                    imageVector = statusInfo.icon,
+                    contentDescription = statusInfo.label,
+                    tint = statusInfo.color,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -598,7 +589,7 @@ fun HistoryEntryCard(
                     text = statusText,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = statusColor
+                    color = statusInfo.color
                 )
             }
         }

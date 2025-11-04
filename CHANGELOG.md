@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2025-11-04
+
+Major feature release adding comprehensive reporting capabilities and gamified, encouraging notification messages with Hinglish.
+
+### Added
+- **Reports Screen** - Comprehensive adherence tracking and analytics
+  - Summary tab showing weekly adherence rate and success metrics
+  - Calendar view with color-coded daily adherence (green/yellow/red)
+  - Trends tab with 30-day adherence line chart
+  - By Medication tab showing per-medication adherence breakdown
+  - Visual progress indicators and statistics
+  - Week start day preference (Sunday/Monday)
+  - Option to include/exclude skipped doses in adherence calculations
+
+- **Gamified Notification Messages** - Encouraging, motivational notifications with liberal use of Hinglish
+  - Automatic streak tracking (consecutive days with all medications taken)
+  - Context-aware messages based on streak level (Champion 30+, Superstar 14+, Rockstar 7+, etc.)
+  - Time-of-day greetings (Good morning, Namaste, Good evening)
+  - Progressive urgency for repeat reminders (friendly → important → urgent)
+  - Encouraging confirmation messages with streak display
+  - Fun Hinglish phrases throughout ("Shabash!", "Bahut achha!", "Chalo, ho gaya!")
+  - Emoji-rich notifications for visual encouragement
+  - Positive reinforcement instead of scolding for missed/late doses
+
+- **CSV Data Export** - Export medication history to CSV for external analysis
+  - Exports all history with medication names, times, and actions
+  - Useful for sharing with healthcare providers
+  - Includes scheduled time, taken time, and on-time status
+
+### Changed
+- **Notification Message System** - Replaced profile-based templates with dynamic gamified messages
+  - Messages now adapt to user's streak and context
+  - Hinglish used throughout for a friendly, relatable tone
+  - Confirmation messages show current streak and encouragement
+
+- **Settings Organization** - Added Reports section in Settings
+  - Week start day preference
+  - Default report tab selection
+  - Adherence calculation options
+  - Export data functionality
+
+### Technical
+- Created `NotificationEncouragement.kt` - Centralized gamification logic with streak tracking
+- Created `ReportsScreen.kt` - Full-featured reporting UI with multiple tabs
+- Created `MedicationStatus.kt` - Data model for medication adherence tracking
+- Added report-related settings to `SettingsStore.kt`
+- Updated `ReminderBroadcastReceiver.kt` to use gamified messages
+- Added CSV export functionality with proper file handling
+- Streak calculation checks up to 90 days of history
+- Version bump to 0.16.0
+
+### New Files
+- app/src/main/java/com/medreminder/app/notifications/NotificationEncouragement.kt
+- app/src/main/java/com/medreminder/app/ui/ReportsScreen.kt
+- app/src/main/java/com/medreminder/app/ui/MedicationStatus.kt
+
+### Modified Files
+- app/src/main/java/com/medreminder/app/notifications/ReminderBroadcastReceiver.kt - Integrated gamified messages
+- app/src/main/java/com/medreminder/app/data/SettingsStore.kt - Added report settings
+- app/src/main/java/com/medreminder/app/ui/SettingsScreen.kt - Added Reports section and export
+- app/src/main/java/com/medreminder/app/ui/HistoryScreen.kt - Minor UI improvements
+- app/src/main/java/com/medreminder/app/MainActivity.kt - Added Reports navigation
+- app/src/main/res/values/strings.xml - Added report and gamification strings
+- app/build.gradle.kts - Version bump to 0.16.0
+
 ## [0.15.5] - 2025-11-03
 
 Critical bug fix for notification scheduling when doses are skipped before their scheduled time.

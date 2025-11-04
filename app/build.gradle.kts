@@ -12,8 +12,8 @@ android {
         applicationId = "com.medreminder.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 15
-        versionName = "0.15.5"
+        versionCode = 16
+        versionName = "0.16.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -100,6 +100,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.foundation:foundation")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.5")

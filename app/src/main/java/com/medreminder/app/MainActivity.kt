@@ -465,7 +465,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     "history" -> {
-                        com.medreminder.app.ui.HistoryScreen(
+                        com.medreminder.app.ui.ReportsScreen(
                             currentLanguage = currentLanguage,
                             onBack = { currentScreen = "home" }
                         )
@@ -551,17 +551,15 @@ fun HomeScreen(
     val pendingMeds by PendingMedicationTracker.pendingMedicationsFlow(context)
         .collectAsState(initial = emptyList())
 
-    // Filter overdue medications (from previous days)
-    val currentCalendar = java.util.Calendar.getInstance()
-    val today = currentCalendar.get(java.util.Calendar.DAY_OF_YEAR)
-    val thisYear = currentCalendar.get(java.util.Calendar.YEAR)
+    // Filter overdue medications using fixed time window approach
+    // Medication becomes OVERDUE 2 hours after scheduled time
+    // Medication stays OVERDUE for 2 hours (total 4 hours from scheduled time)
+    val currentTimeMillis = System.currentTimeMillis()
+    val overdueThreshold = PendingMedicationTracker.getOverdueThresholdMillis()
+    val overdueWindow = PendingMedicationTracker.getOverdueWindowMillis()
 
     val overdueMedications = pendingMeds.filter { pending ->
-        // Calculate scheduled time from timestamp and hour/minute
-        val timestampCal = java.util.Calendar.getInstance()
-        timestampCal.timeInMillis = pending.timestamp
-
-        // Set the calendar to the scheduled time
+        // Calculate the actual scheduled time for this medication
         val scheduledCal = java.util.Calendar.getInstance()
         scheduledCal.timeInMillis = pending.timestamp
         scheduledCal.set(java.util.Calendar.HOUR_OF_DAY, pending.hour)
@@ -569,11 +567,11 @@ fun HomeScreen(
         scheduledCal.set(java.util.Calendar.SECOND, 0)
         scheduledCal.set(java.util.Calendar.MILLISECOND, 0)
 
-        val pendingDay = scheduledCal.get(java.util.Calendar.DAY_OF_YEAR)
-        val pendingYear = scheduledCal.get(java.util.Calendar.YEAR)
+        val scheduledTime = scheduledCal.timeInMillis
+        val timeSinceScheduled = currentTimeMillis - scheduledTime
 
-        // Overdue if from a previous day or previous year
-        (pendingYear < thisYear) || (pendingYear == thisYear && pendingDay < today)
+        // Overdue if: scheduledTime + 2 hours < currentTime < scheduledTime + 4 hours
+        timeSinceScheduled >= overdueThreshold && timeSinceScheduled < (overdueThreshold + overdueWindow)
     }
 
     // Handle back button press - show exit confirmation

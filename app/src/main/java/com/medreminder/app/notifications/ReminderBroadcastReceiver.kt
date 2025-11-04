@@ -21,6 +21,7 @@ import com.medreminder.app.data.Profile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ReminderBroadcastReceiver : BroadcastReceiver() {
 
@@ -130,9 +131,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 val takenTime = System.currentTimeMillis()
                 val scheduledTime = scheduledCalendar.timeInMillis
 
-                // Delete any existing SKIPPED entry for this dose (user is correcting their action)
+                // Delete any existing SKIPPED or MISSED entry for this dose (user is correcting their action)
                 historyDao.deleteHistoryEntry(medicationId, scheduledTime, "SKIPPED")
-                Log.d(TAG, "Deleted any existing SKIPPED entry for $medicationName at $hour:$minute")
+                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "MISSED")
+                Log.d(TAG, "Deleted any existing SKIPPED/MISSED entry for $medicationName at $hour:$minute")
 
                 // Consider "on time" if taken within 30 minutes of scheduled time
                 val timeDiffMinutes = Math.abs(takenTime - scheduledTime) / (1000 * 60)
@@ -181,9 +183,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 }
                 val scheduledTime = scheduledCalendar.timeInMillis
 
-                // Delete any existing TAKEN entry for this dose (user is correcting their action)
+                // Delete any existing TAKEN or MISSED entry for this dose (user is correcting their action)
                 historyDao.deleteHistoryEntry(medicationId, scheduledTime, "TAKEN")
-                Log.d(TAG, "Deleted any existing TAKEN entry for $medicationName at $hour:$minute")
+                historyDao.deleteHistoryEntry(medicationId, scheduledTime, "MISSED")
+                Log.d(TAG, "Deleted any existing TAKEN/MISSED entry for $medicationName at $hour:$minute")
 
                 val history = MedicationHistory(
                     profileId = profileId,
@@ -360,14 +363,15 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val isScreenOn = powerManager.isInteractive
         val shouldUseFullScreenIntent = !isScreenOn || isLocked
 
-        // Generate notification message using profile's template
-        val notificationMessage = profile?.let {
-            Profile.renderNotificationMessage(
-                it.notificationMessageTemplate,
-                it.name,
-                medicationName
+        // Generate gamified, encouraging notification message
+        val notificationMessage = runBlocking {
+            NotificationEncouragement.getEncouragingMessage(
+                context,
+                medicationName,
+                profile?.name ?: "Friend",
+                repeatCount
             )
-        } ?: context.getString(R.string.time_to_take, medicationName)
+        }
 
         // For locked screen without full detail, use generic title
         val title = if (!showFull && isLocked) {
@@ -649,7 +653,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         // Remove from pending tracker
         PendingMedicationTracker.removePendingMedication(context, medicationId, hour, minute)
 
-        // Get profileId and record history
+        // Get profileId, record history, and show gamified confirmation
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val database = MedicationDatabase.getDatabase(context)
@@ -657,19 +661,41 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 val profileId = medication?.profileId ?: 1L
 
                 recordTakenHistory(context, medicationId, medicationName, profileId, hour, minute)
+
+                // Calculate timing for confirmation message
+                val scheduledCalendar = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, hour)
+                    set(java.util.Calendar.MINUTE, minute)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }
+                val takenTime = System.currentTimeMillis()
+                val scheduledTime = scheduledCalendar.timeInMillis
+                val timeDiffMinutes = Math.abs(takenTime - scheduledTime) / (1000 * 60)
+                val wasOnTime = timeDiffMinutes <= 30
+
+                // Get encouraging confirmation message
+                val confirmationMessage = NotificationEncouragement.getConfirmationMessage(
+                    context,
+                    medicationName,
+                    wasOnTime,
+                    timeDiffMinutes
+                )
+
+                // Show on main thread
+                withContext(Dispatchers.Main) {
+                    showConfirmation(
+                        context,
+                        notificationManager,
+                        R.string.marked_as_taken,
+                        confirmationMessage,
+                        medicationId.toInt() + 9000
+                    )
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error getting medication for history", e)
             }
         }
-
-        // Show confirmation
-        showConfirmation(
-            context,
-            notificationManager,
-            R.string.marked_as_taken,
-            medicationName,
-            medicationId.toInt() + 9000
-        )
     }
 
     private fun handleSnooze(context: Context, intent: Intent) {
@@ -697,12 +723,16 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             repeatCount = 0
         )
 
-        // Show confirmation
+        // Show gamified snooze confirmation
+        val snoozeMinutes = runBlocking { SettingsStore.repeatIntervalFlow(context).first() }
+        val snoozeMessage = runBlocking {
+            NotificationEncouragement.getSnoozeMessage(context, snoozeMinutes)
+        }
         showConfirmation(
             context,
             notificationManager,
             R.string.reminder_snoozed,
-            medicationName,
+            snoozeMessage,
             medicationId.toInt() + 9000
         )
     }
@@ -742,12 +772,13 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             }
         }
 
-        // Show confirmation
+        // Show gamified skip confirmation
+        val skipMessage = NotificationEncouragement.getSkipMessage(medicationName)
         showConfirmation(
             context,
             notificationManager,
             R.string.dose_skipped,
-            medicationName,
+            skipMessage,
             medicationId.toInt() + 9000
         )
     }
@@ -772,15 +803,25 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             recordTakenHistory(context, med.medicationId, med.medicationName, med.profileId, hour, minute)
         }
 
-        // Show confirmation
-        val medicationNames = medications.joinToString(", ") { it.medicationName }
-        showConfirmation(
-            context,
-            notificationManager,
-            R.string.marked_as_taken,
-            medicationNames,
-            getGroupedNotificationId(hour, minute) + 90000
-        )
+        // Show gamified group confirmation
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val streak = NotificationEncouragement.getCurrentStreak(context) + 1
+                val confirmationMessage = "🎉 Shabash! Sab medicines li! Streak: $streak days! 🔥💪"
+
+                withContext(Dispatchers.Main) {
+                    showConfirmation(
+                        context,
+                        notificationManager,
+                        R.string.marked_as_taken,
+                        confirmationMessage,
+                        getGroupedNotificationId(hour, minute) + 90000
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error showing group confirmation", e)
+            }
+        }
     }
 
     private fun handleSnoozeAll(context: Context, intent: Intent) {
@@ -811,13 +852,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             )
         }
 
-        // Show confirmation
-        val medicationNames = medications.joinToString(", ") { it.medicationName }
+        // Show gamified snooze all confirmation
+        val snoozeMinutes = runBlocking { SettingsStore.repeatIntervalFlow(context).first() }
+        val snoozeMessage = "😴 Thodi der rest! All ${medications.size} medicines ka reminder $snoozeMinutes min mein!"
         showConfirmation(
             context,
             notificationManager,
             R.string.reminder_snoozed,
-            medicationNames,
+            snoozeMessage,
             getGroupedNotificationId(hour, minute) + 90000
         )
     }
@@ -848,13 +890,13 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             recordSkippedHistory(context, med.medicationId, med.medicationName, med.profileId, hour, minute)
         }
 
-        // Show confirmation
-        val medicationNames = medications.joinToString(", ") { it.medicationName }
+        // Show gamified skip all confirmation
+        val skipMessage = "💊 Skip ho gaya. Agli baar sab zaroor lena! 🎯"
         showConfirmation(
             context,
             notificationManager,
             R.string.dose_skipped,
-            medicationNames,
+            skipMessage,
             getGroupedNotificationId(hour, minute) + 90000
         )
     }

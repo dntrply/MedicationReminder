@@ -31,6 +31,14 @@ object PendingMedicationTracker {
     private val KEY_PENDING = stringPreferencesKey("pending_list")
     private val KEY_LAST_CLEANUP = androidx.datastore.preferences.core.longPreferencesKey("last_cleanup_time")
 
+    // Overdue threshold constants
+    // A medication becomes OVERDUE 2 hours after its scheduled time
+    private const val OVERDUE_THRESHOLD_HOURS = 2
+    // A medication is removed from OVERDUE (and marked MISSED) 2 hours after becoming overdue
+    // Total time from scheduled: 2 hours (threshold) + 2 hours (window) = 4 hours
+    private const val OVERDUE_WINDOW_HOURS = 2
+    private const val TOTAL_STALE_HOURS = OVERDUE_THRESHOLD_HOURS + OVERDUE_WINDOW_HOURS // 4 hours total
+
     data class PendingMedication(
         val medicationId: Long,
         val medicationName: String,
@@ -59,9 +67,23 @@ object PendingMedicationTracker {
         // Add the new entry
         pending.add(medication)
 
-        // Clean up old entries (older than 2 hours)
-        val cutoffTime = System.currentTimeMillis() - (2 * 60 * 60 * 1000)
-        pending.removeAll { it.timestamp < cutoffTime }
+        // Clean up old entries (older than 4 hours from scheduled time)
+        // This prevents the list from growing indefinitely
+        val now = System.currentTimeMillis()
+        pending.removeAll { med ->
+            val scheduledCal = java.util.Calendar.getInstance()
+            scheduledCal.timeInMillis = med.timestamp
+            scheduledCal.set(java.util.Calendar.HOUR_OF_DAY, med.hour)
+            scheduledCal.set(java.util.Calendar.MINUTE, med.minute)
+            scheduledCal.set(java.util.Calendar.SECOND, 0)
+            scheduledCal.set(java.util.Calendar.MILLISECOND, 0)
+
+            val scheduledTime = scheduledCal.timeInMillis
+            val timeSinceScheduled = now - scheduledTime
+
+            // Remove if more than 4 hours past scheduled time
+            timeSinceScheduled >= (TOTAL_STALE_HOURS * 60 * 60 * 1000)
+        }
 
         // Save to DataStore
         val jsonArray = JSONArray()
@@ -305,7 +327,8 @@ object PendingMedicationTracker {
 
         // Current time for checking if pending medications are stale
         val now = System.currentTimeMillis()
-        val cutoffTime = now - (24 * 60 * 60 * 1000) // 24 hours ago
+        // Using the new 4-hour total window (2 hours overdue threshold + 2 hours overdue window)
+        val cutoffTime = now - (TOTAL_STALE_HOURS * 60 * 60 * 1000)
 
         // Track medications to record as MISSED
         val missedMedications = mutableListOf<PendingMedication>()
@@ -313,7 +336,8 @@ object PendingMedicationTracker {
         // Remove any pending medications whose IDs don't exist in the database
         pending.removeAll { !validIds.contains(it.medicationId) }
 
-        // Identify and remove stale pending medications (older than 24 hours)
+        // Identify and remove stale pending medications (older than 4 hours from scheduled time)
+        // This removes medications that have been overdue for more than 2 hours
         pending.removeAll { med ->
             // Calculate the actual scheduled time for this medication
             val scheduledCal = java.util.Calendar.getInstance()
@@ -324,10 +348,11 @@ object PendingMedicationTracker {
             scheduledCal.set(java.util.Calendar.MILLISECOND, 0)
 
             val scheduledTime = scheduledCal.timeInMillis
+            val timeSinceScheduled = now - scheduledTime
 
-            // If scheduled time was more than 24 hours ago, it's stale
-            if (scheduledTime < cutoffTime) {
-                Log.d(TAG, "Found stale pending: ${med.medicationName} at ${med.hour}:${med.minute}")
+            // If scheduled time was more than 4 hours ago, it's stale (past the overdue window)
+            if (timeSinceScheduled >= (TOTAL_STALE_HOURS * 60 * 60 * 1000)) {
+                Log.d(TAG, "Found stale pending: ${med.medicationName} at ${med.hour}:${med.minute} (${timeSinceScheduled / (60 * 60 * 1000)} hours ago)")
                 missedMedications.add(med)
                 true // Remove from pending
             } else {
@@ -558,4 +583,16 @@ object PendingMedicationTracker {
                cal1.get(java.util.Calendar.HOUR_OF_DAY) == cal2.get(java.util.Calendar.HOUR_OF_DAY) &&
                cal1.get(java.util.Calendar.MINUTE) == cal2.get(java.util.Calendar.MINUTE)
     }
+
+    /**
+     * Get the overdue threshold in milliseconds
+     * A medication becomes OVERDUE this many milliseconds after its scheduled time
+     */
+    fun getOverdueThresholdMillis(): Long = OVERDUE_THRESHOLD_HOURS * 60 * 60 * 1000L
+
+    /**
+     * Get the overdue window in milliseconds
+     * A medication stays OVERDUE for this many milliseconds before being marked as MISSED
+     */
+    fun getOverdueWindowMillis(): Long = OVERDUE_WINDOW_HOURS * 60 * 60 * 1000L
 }

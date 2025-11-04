@@ -22,6 +22,11 @@ object SettingsStore {
     private val TRANSCRIPTION_CONSENT = booleanPreferencesKey("transcription_consent")
     private val TRANSCRIPTION_CONSENT_ASKED = booleanPreferencesKey("transcription_consent_asked")
 
+    // Report-related settings
+    private val WEEK_START_DAY = stringPreferencesKey("week_start_day") // "sunday" or "monday"
+    private val DEFAULT_REPORT_TAB = stringPreferencesKey("default_report_tab") // "summary", "calendar", "trends", "by_medication"
+    private val INCLUDE_SKIPPED_IN_ADHERENCE = booleanPreferencesKey("include_skipped_in_adherence")
+
     fun languageFlow(context: Context): Flow<String> =
         context.userPrefs.data.map { prefs -> prefs[LANGUAGE] ?: "en" }
 
@@ -84,6 +89,42 @@ object SettingsStore {
             prefs[TRANSCRIPTION_CONSENT] = granted
             prefs[TRANSCRIPTION_CONSENT_ASKED] = true
         }
+    }
+
+    // Week start day settings (default: Sunday)
+    fun weekStartDayFlow(context: Context): Flow<String> =
+        context.userPrefs.data.map { prefs -> prefs[WEEK_START_DAY] ?: "sunday" }
+
+    suspend fun getWeekStartDay(context: Context): String {
+        return context.userPrefs.data.map { it[WEEK_START_DAY] ?: "sunday" }.first()
+    }
+
+    suspend fun setWeekStartDay(context: Context, day: String) {
+        context.userPrefs.edit { prefs -> prefs[WEEK_START_DAY] = day }
+    }
+
+    // Default report tab settings (default: summary)
+    fun defaultReportTabFlow(context: Context): Flow<String> =
+        context.userPrefs.data.map { prefs -> prefs[DEFAULT_REPORT_TAB] ?: "summary" }
+
+    suspend fun getDefaultReportTab(context: Context): String {
+        return context.userPrefs.data.map { it[DEFAULT_REPORT_TAB] ?: "summary" }.first()
+    }
+
+    suspend fun setDefaultReportTab(context: Context, tab: String) {
+        context.userPrefs.edit { prefs -> prefs[DEFAULT_REPORT_TAB] = tab }
+    }
+
+    // Include skipped in adherence calculation (default: false - skipped doses don't count against adherence)
+    fun includeSkippedInAdherenceFlow(context: Context): Flow<Boolean> =
+        context.userPrefs.data.map { prefs -> prefs[INCLUDE_SKIPPED_IN_ADHERENCE] ?: false }
+
+    suspend fun getIncludeSkippedInAdherence(context: Context): Boolean {
+        return context.userPrefs.data.map { it[INCLUDE_SKIPPED_IN_ADHERENCE] ?: false }.first()
+    }
+
+    suspend fun setIncludeSkippedInAdherence(context: Context, include: Boolean) {
+        context.userPrefs.edit { prefs -> prefs[INCLUDE_SKIPPED_IN_ADHERENCE] = include }
     }
 }
 

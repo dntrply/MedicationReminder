@@ -204,4 +204,30 @@
     <string name="missed_label">Missed</string>
     <string name="scheduled_time">Scheduled: %s</string>
     <string name="taken_time">Taken: %s</string>
+
+    <!-- Reports Screen Tabs -->
+    <string name="report_summary">Summary</string>
+    <string name="report_calendar">Calendar</string>
+    <string name="report_trends">Trends</string>
+    <string name="report_by_medication">By Med</string>
+
+    <!-- Summary Stats -->
+    <string name="this_week">This Week</string>
+    <string name="adherence_rate">How You\'re Doing</string>
+    <string name="success_score">Success Score</string>
+    <string name="your_progress">Your Progress</string>
+
+    <!-- Reports Settings -->
+    <string name="reports_label">Reports</string>
+    <string name="week_start_day">Week Start Day</string>
+    <string name="week_start_sunday">Sunday</string>
+    <string name="week_start_monday">Monday</string>
+    <string name="default_report_tab">Default Report Tab</string>
+    <string name="include_skipped_in_adherence">Count Skipped as Missed</string>
+    <string name="include_skipped_description">Include skipped doses in adherence calculations</string>
+    <string name="export_data">Export Data</string>
+    <string name="export_history_csv">Export History as CSV</string>
+    <string name="exporting">Exporting…</string>
+    <string name="export_success">Data exported successfully</string>
+    <string name="export_failed">Export failed</string>
 </resources>

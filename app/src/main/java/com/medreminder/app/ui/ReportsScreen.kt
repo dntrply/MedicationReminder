@@ -1465,13 +1465,13 @@ fun ByMedicationDetailView(currentLanguage: String) {
     val medications by medicationDao.getMedicationsByProfile(activeProfileId ?: 1L)
         .collectAsState(initial = emptyList())
 
-    // State for selected medication
-    var selectedMedication by remember { mutableStateOf<com.medreminder.app.data.Medication?>(null) }
+    // State for selected medications (multiple selection)
+    var selectedMedications by remember { mutableStateOf<Set<com.medreminder.app.data.Medication>>(emptySet()) }
 
-    // Initialize with first medication if available
+    // Initialize with all medications selected by default
     LaunchedEffect(medications) {
-        if (selectedMedication == null && medications.isNotEmpty()) {
-            selectedMedication = medications.first()
+        if (selectedMedications.isEmpty() && medications.isNotEmpty()) {
+            selectedMedications = medications.toSet()
         }
     }
 
@@ -1500,16 +1500,20 @@ fun ByMedicationDetailView(currentLanguage: String) {
         endTime = dateRange.second
     ).collectAsState(initial = emptyList())
 
-    // Filter history for selected medication
-    val medicationHistory = remember(selectedMedication, allHistory) {
-        selectedMedication?.let { med ->
-            allHistory.filter { it.medicationId == med.id }
-        } ?: emptyList()
+    // Filter history for selected medications
+    val medicationHistory = remember(selectedMedications, allHistory) {
+        if (selectedMedications.isEmpty()) {
+            emptyList()
+        } else {
+            val selectedIds = selectedMedications.map { it.id }.toSet()
+            allHistory.filter { it.medicationId in selectedIds }
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -1543,30 +1547,27 @@ fun ByMedicationDetailView(currentLanguage: String) {
                 }
             }
         } else {
-            // Medication selector dropdown
-            MedicationDropdownSelector(
+            // Medication multi-selector
+            MedicationMultiSelector(
                 medications = medications,
-                selectedMedication = selectedMedication,
-                onMedicationSelected = { selectedMedication = it }
+                selectedMedications = selectedMedications,
+                onSelectionChanged = { selectedMedications = it }
             )
 
-            selectedMedication?.let { medication ->
-                // Medication details card
-                MedicationDetailsCard(
-                    medication = medication,
+            if (selectedMedications.isNotEmpty()) {
+                // Combined statistics card for selected medications
+                CombinedMedicationStatisticsCard(
+                    selectedMedications = selectedMedications,
                     history = medicationHistory
                 )
 
-                // Statistics card
-                MedicationStatisticsCard(
-                    medication = medication,
-                    history = medicationHistory
-                )
-
-                // Recent history list
-                RecentHistoryList(
-                    history = medicationHistory.sortedByDescending { it.scheduledTime }.take(10)
-                )
+                // Show recent history list only if exactly one medication is selected and has history
+                if (selectedMedications.size == 1 && medicationHistory.isNotEmpty()) {
+                    // Recent history list
+                    RecentHistoryList(
+                        history = medicationHistory.sortedByDescending { it.scheduledTime }.take(10)
+                    )
+                }
             }
         }
     }
@@ -1574,40 +1575,240 @@ fun ByMedicationDetailView(currentLanguage: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicationDropdownSelector(
+fun MedicationMultiSelector(
     medications: List<com.medreminder.app.data.Medication>,
-    selectedMedication: com.medreminder.app.data.Medication?,
-    onMedicationSelected: (com.medreminder.app.data.Medication) -> Unit
+    selectedMedications: Set<com.medreminder.app.data.Medication>,
+    onSelectionChanged: (Set<com.medreminder.app.data.Medication>) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        OutlinedTextField(
-            value = selectedMedication?.name ?: "Select Medication",
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Medication") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(),
-            colors = OutlinedTextFieldDefaults.colors()
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
+                .padding(16.dp)
         ) {
-            medications.forEach { medication ->
-                DropdownMenuItem(
-                    text = { Text(medication.name) },
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Select Medications",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF424242)
+                )
+
+                // Select All / Deselect All button
+                TextButton(
                     onClick = {
-                        onMedicationSelected(medication)
-                        expanded = false
+                        if (selectedMedications.size == medications.size) {
+                            onSelectionChanged(emptySet())
+                        } else {
+                            onSelectionChanged(medications.toSet())
+                        }
                     }
+                ) {
+                    Text(
+                        text = if (selectedMedications.size == medications.size) "Deselect All" else "Select All",
+                        fontSize = 14.sp,
+                        color = Color(0xFF4A90E2)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Medication checkboxes with images - let the whole screen scroll naturally
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                medications.forEach { medication ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val newSelection = if (selectedMedications.contains(medication)) {
+                                    selectedMedications - medication
+                                } else {
+                                    selectedMedications + medication
+                                }
+                                onSelectionChanged(newSelection)
+                            }
+                            .background(
+                                color = if (selectedMedications.contains(medication))
+                                    Color(0xFFE3F2FD) else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Medication photo
+                        if (medication.photoUri != null) {
+                            Card(
+                                modifier = Modifier.size(48.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                androidx.compose.foundation.Image(
+                                    painter = coil.compose.rememberAsyncImagePainter(
+                                        android.net.Uri.parse(medication.photoUri)
+                                    ),
+                                    contentDescription = medication.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(Color(0xFFE3F2FD), RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Medication,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color(0xFF4A90E2)
+                                )
+                            }
+                        }
+
+                        // Medication name
+                        Text(
+                            text = medication.name,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF424242),
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Checkbox
+                        Checkbox(
+                            checked = selectedMedications.contains(medication),
+                            onCheckedChange = { isChecked ->
+                                val newSelection = if (isChecked) {
+                                    selectedMedications + medication
+                                } else {
+                                    selectedMedications - medication
+                                }
+                                onSelectionChanged(newSelection)
+                            },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Color(0xFF4A90E2)
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Show selected count
+            if (selectedMedications.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${selectedMedications.size} of ${medications.size} selected",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CombinedMedicationStatisticsCard(
+    selectedMedications: Set<com.medreminder.app.data.Medication>,
+    history: List<com.medreminder.app.data.MedicationHistory>
+) {
+    val context = LocalContext.current
+
+    // Get include skipped in adherence setting
+    val includeSkipped by SettingsStore.includeSkippedInAdherenceFlow(context)
+        .collectAsState(initial = false)
+
+    // Calculate combined statistics
+    val takenCount = history.count { it.action == "TAKEN" }
+    val missedCount = history.count { it.action == "MISSED" }
+    val skippedCount = history.count { it.action == "SKIPPED" }
+    val totalCount = history.size
+    val adherencePercentage = calculateAdherencePercentage(takenCount, totalCount, skippedCount, includeSkipped)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = if (selectedMedications.size == 1) {
+                    "Your Progress (Last 30 Days)"
+                } else {
+                    "Combined Progress (Last 30 Days)"
+                },
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF424242)
+            )
+
+            // Large adherence percentage
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "$adherencePercentage%",
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = when {
+                        adherencePercentage >= 90 -> Color(0xFF4CAF50)
+                        adherencePercentage >= 70 -> Color(0xFFFFA726)
+                        else -> Color(0xFFEF5350)
+                    }
+                )
+            }
+
+            Text(
+                text = "Success Score",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Divider()
+
+            // Stats grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatColumn(
+                    statusType = MedicationStatus.Type.TAKEN_ON_TIME,
+                    value = takenCount.toString(),
+                    label = "Taken"
+                )
+                StatColumn(
+                    statusType = MedicationStatus.Type.MISSED,
+                    value = missedCount.toString(),
+                    label = "Missed"
+                )
+                StatColumn(
+                    statusType = MedicationStatus.Type.SKIPPED,
+                    value = skippedCount.toString(),
+                    label = "Skipped"
                 )
             }
         }

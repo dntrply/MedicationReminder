@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.2] - 2025-11-04
+
+UI enhancement release improving the Reports Medicine Wise view with multi-medication selection and visual medication selector designed for elderly users.
+
+### Changed
+- **Multi-Medication Selection in Reports** - Medicine Wise view now supports selecting multiple medications
+  - All medications selected by default when opening the view
+  - "Select All" / "Deselect All" button for quick toggling
+  - Combined progress statistics shown for all selected medications
+  - Users can deselect to view individual medication details
+
+- **Visual Medication Selector** - Enhanced selector with medication images for easier recognition
+  - Each medication displays its photo (48x48dp thumbnail) in the selector
+  - Placeholder medication icon shown when no photo is available
+  - Selected medications highlighted with light blue background
+  - Improved spacing and larger touch targets for easier interaction
+
+- **Elderly-Friendly Scrolling** - Natural page scrolling instead of nested scroll areas
+  - Entire Medicine Wise screen scrolls naturally as one page
+  - Removed constrained 300dp height limit on medication list
+  - No hidden scrollable areas that might confuse users
+  - Consistent with standard Android scrolling behavior
+
+- **Simplified View Layout** - Removed redundant medication breakdown card
+  - When multiple medications selected, shows only combined progress
+  - Individual details shown only when single medication selected
+  - Cleaner interface with less visual clutter
+  - More intuitive user flow
+
+### Technical
+- Modified `ReportsScreen.kt` ByMedicationDetailView to use Set<Medication> for multi-selection
+- Replaced MedicationDropdownSelector with new MedicationMultiSelector component
+- Added CombinedMedicationStatisticsCard for aggregate statistics display
+- Removed MedicationDetailsCard and redundant breakdown components
+- Added natural vertical scrolling to entire Medicine Wise view
+
 ## [0.17.1] - 2025-11-04
 
 Critical bug fix release addressing incorrect medication status tracking and reporting display issues.
